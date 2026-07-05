@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tasks.move",
+  "description": "Move a card to a target column key at an optional index, subject to MOVE_POLICY. Returns {result: applied|deferred|denied, reason_key?}.",
+  "type": "object",
+  "required": ["task_id", "to_column"],
+  "properties": {
+    "task_id":   { "type": "string", "format": "uuid" },
+    "to_column": { "type": "string" },
+    "index":     { "type": ["integer", "null"] },
+    "actor_id":  { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.assigned",
+  "description": "A card's assignee set changed — one event per added/removed user.",
+  "type": "object",
+  "required": ["task_id", "board_id", "assignee_id", "op"],
+  "properties": {
+    "task_id":     { "type": "string", "format": "uuid" },
+    "board_id":    { "type": "string", "format": "uuid" },
+    "assignee_id": { "type": "string" },
+    "op":          { "type": "string", "enum": ["assigned", "unassigned"] },
+    "actor_id":    { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

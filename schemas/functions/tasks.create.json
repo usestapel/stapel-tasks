@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tasks.create",
+  "description": "Create a card on a board. `column` is a column key (defaults to the first column). `origin` projects an external record (idempotent per board+origin_type+origin_ref).",
+  "type": "object",
+  "required": ["board_id", "title"],
+  "properties": {
+    "board_id":    { "type": "string", "format": "uuid" },
+    "title":       { "type": "string" },
+    "description": { "type": "string" },
+    "column":      { "type": ["string", "null"] },
+    "features":    { "type": ["object", "null"] },
+    "priority":    { "type": ["integer", "null"] },
+    "parent_id":   { "type": ["string", "null"] },
+    "creator_id":  { "type": ["string", "null"] },
+    "origin": {
+      "type": ["object", "null"],
+      "properties": {
+        "type": { "type": "string" },
+        "ref":  { "type": "string" },
+        "meta": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

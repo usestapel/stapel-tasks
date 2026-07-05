@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.updated",
+  "description": "A card's fields changed. Coarse-grained 'the card changed' signal for webhooks/cache invalidation; `changed_fields` names what moved.",
+  "type": "object",
+  "required": ["task_id", "board_id", "changed_fields"],
+  "properties": {
+    "task_id":        { "type": "string", "format": "uuid" },
+    "board_id":       { "type": "string", "format": "uuid" },
+    "changed_fields": { "type": "array", "items": { "type": "string" } },
+    "actor_id":       { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.comment_added",
+  "description": "A comment was added to a card. Doubles as the human->orchestrator reply channel for a managed card (a comment on a WAITING card).",
+  "type": "object",
+  "required": ["task_id", "board_id", "comment_id"],
+  "properties": {
+    "task_id":    { "type": "string", "format": "uuid" },
+    "board_id":   { "type": "string", "format": "uuid" },
+    "comment_id": { "type": "string", "format": "uuid" },
+    "author_id":  { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

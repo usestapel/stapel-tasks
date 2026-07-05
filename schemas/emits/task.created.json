@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.created",
+  "description": "A card was created on a board. `origin_ref` is set when an external system projected the card; `category` is the fixed machine semantic of the card's column.",
+  "type": "object",
+  "required": ["board_id", "task_id", "title", "column", "category"],
+  "properties": {
+    "workspace_id": { "type": ["string", "null"] },
+    "board_id":     { "type": "string", "format": "uuid" },
+    "task_id":      { "type": "string", "format": "uuid" },
+    "title":        { "type": "string" },
+    "column":       { "type": "string" },
+    "category":     { "type": "string" },
+    "creator_id":   { "type": ["string", "null"] },
+    "origin_type":  { "type": ["string", "null"] },
+    "origin_ref":   { "type": ["string", "null"] },
+    "parent_id":    { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

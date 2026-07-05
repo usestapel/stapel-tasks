@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.archived",
+  "description": "A card was archived (soft-deleted).",
+  "type": "object",
+  "required": ["task_id", "board_id"],
+  "properties": {
+    "task_id":  { "type": "string", "format": "uuid" },
+    "board_id": { "type": "string", "format": "uuid" },
+    "actor_id": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

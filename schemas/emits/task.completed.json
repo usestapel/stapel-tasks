@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.completed",
+  "description": "A card entered a DONE-category column. Semantic completion signal; a subscriber need not know the board's workflow.",
+  "type": "object",
+  "required": ["task_id", "board_id"],
+  "properties": {
+    "task_id":      { "type": "string", "format": "uuid" },
+    "board_id":     { "type": "string", "format": "uuid" },
+    "actor_id":     { "type": ["string", "null"] },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "origin_ref":   { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

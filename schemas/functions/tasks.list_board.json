@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tasks.list_board",
+  "description": "List a board's columns and their cards. Optional filters by column key, category or assignee. Returns cards grouped by column.",
+  "type": "object",
+  "required": ["board_id"],
+  "properties": {
+    "board_id":    { "type": "string", "format": "uuid" },
+    "column":      { "type": ["string", "null"] },
+    "category":    { "type": ["string", "null"] },
+    "assignee_id": { "type": ["string", "null"] },
+    "origin_ref":  { "type": ["string", "null"] },
+    "include_archived": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

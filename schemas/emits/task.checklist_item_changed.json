@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.checklist_item_changed",
+  "description": "A checklist step changed state. The QA channel: a FAILED step is mechanically visible to a projector (ready-made steps-to-reproduce). `ref` links the item to an external step.",
+  "type": "object",
+  "required": ["task_id", "item_id", "state"],
+  "properties": {
+    "task_id":  { "type": "string", "format": "uuid" },
+    "item_id":  { "type": "string", "format": "uuid" },
+    "ref":      { "type": ["string", "null"] },
+    "state":    { "type": "string", "enum": ["pending", "done", "failed"] },
+    "actor_id": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

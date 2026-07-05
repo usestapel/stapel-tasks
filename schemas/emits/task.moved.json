@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.moved",
+  "description": "A card moved between columns. Categories are included so subscribers can react to workflow semantics without knowing a board's column names.",
+  "type": "object",
+  "required": ["task_id", "board_id", "from_column", "to_column", "from_category", "to_category"],
+  "properties": {
+    "task_id":       { "type": "string", "format": "uuid" },
+    "board_id":      { "type": "string", "format": "uuid" },
+    "from_column":   { "type": "string" },
+    "to_column":     { "type": "string" },
+    "from_category": { "type": "string" },
+    "to_category":   { "type": "string" },
+    "actor_id":      { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}
