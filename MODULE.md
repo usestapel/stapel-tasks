@@ -49,6 +49,28 @@ label is `stapel_taskstore`** (renamed upstream; a pre-1.0 minor). If a host's
 `stapel_tasks`, Django will raise a duplicate-label error. The test harness
 here deliberately does **not** install `taskstore` (see `conftest.py`).
 
+## Admin categories (`@access`, admin-suite AS-5)
+
+Reviewed against `stapel_core.access.access`'s three categories (business /
+ops / secret). Outcome: **zero decorators** — every model here stays on the
+implicit `@access.standard` default.
+
+- `Board`, `Column`, `Task`, `ChecklistItem`, `TaskComment` are all
+  business/domain rows staff and end users directly create, read, and edit
+  through the admin or the API — a Trello-like kanban surface, not service
+  machinery. None matches `ops` (outbox/dedup/TTL-expiring/audit-log shape:
+  no queue, no delivery/attempt bookkeeping, nothing meant to be invisible to
+  staff) or `secret` (no token/key/credential/password-shaped field on any
+  model — `origin_meta`/`features`/`settings` are opaque JSON payloads owned
+  by the host, not credentials).
+- No hidden audit-log, webhook-delivery, or notification-delivery model
+  exists elsewhere in this repo (checked: `models.py` is the only file
+  defining a `models.Model` subclass outside migrations).
+- No disputed/ambiguous cases.
+
+Since nothing is decorated, `admin.py`'s existing `ModelAdmin` registrations
+are unchanged (no swap to `StapelModelAdmin` was needed).
+
 ## Extension points (fork-free)
 
 ### 1. `SCOPE_PROVIDER` — tenancy + permissions (dotted path, REPLACE)
