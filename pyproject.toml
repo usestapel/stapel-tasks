@@ -34,8 +34,8 @@ dependencies = [
 # stapel-attributes when it is installed. The module runs without it (the
 # feature seam degrades to a pass-through) — install this extra to turn on
 # typed custom-field validation.
-attributes = ["stapel-attributes>=0.1,<0.2"]
-all = ["stapel-attributes>=0.1,<0.2"]
+attributes = ["stapel-attributes>=0.3,<0.4"]
+all = ["stapel-attributes>=0.3,<0.4"]
 
 [project.urls]
 Homepage = "https://stapel.dev"
