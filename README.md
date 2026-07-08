@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/usestapel/stapel-tasks/actions/workflows/ci.yml/badge.svg)](https://github.com/usestapel/stapel-tasks/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/usestapel/stapel-tasks/graph/badge.svg)](https://codecov.io/gh/usestapel/stapel-tasks)
+[![PyPI](https://img.shields.io/pypi/v/stapel-tasks.svg)](https://pypi.org/project/stapel-tasks/)
 
 Generic tasks and kanban boards for the [Stapel framework](https://github.com/usestapel) —
 composable Django apps that deploy as a monolith or as microservices without
