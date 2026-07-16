@@ -4,6 +4,13 @@ All notable changes to stapel-tasks are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0 semver: **minor = breaking**, patch = compatible.
 
+## [0.1.4] — 2026-07-17
+
+### Changed
+- `stapel-core` ceiling raised `>=0.10,<0.11` → `>=0.10,<0.12` (core 0.11
+  fleet re-pin: default bus, nav, config-checks, error params/language —
+  additive for modules). Suite green as-is.
+
 ## [0.1.2] — 2026-07-11
 
 Patch release: HEAD had advanced past the `v0.1.1` tag without a release;
