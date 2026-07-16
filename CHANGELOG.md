@@ -4,6 +4,30 @@ All notable changes to stapel-tasks are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0 semver: **minor = breaking**, patch = compatible.
 
+## [0.1.2] — 2026-07-11
+
+Patch release: HEAD had advanced past the `v0.1.1` tag without a release;
+`0.1.2` publishes the accumulated non-code housekeeping and fixes the core
+pin. No behavior changes.
+
+### Fixed
+- Repinned `stapel-core` to the `>=0.10,<0.11` window — the published
+  `0.10.0`; the old `>=0.8,<0.9` pin no longer resolved against PyPI.
+
+### Added
+- `CONFIG.MD` registry (static-scaffold-and-config.md §2): every key
+  stapel-tasks reads through its AppSettings namespace, with source,
+  purpose, required flag and default — aggregated into a scaffolded
+  project's root CONFIG.MD by `assemble_scaffold`.
+- `make migration-lint` + CI step (release-management.md §3; the CI step
+  ships commented-out until module CI can install stapel-tools).
+
+### Changed
+- MODULE.md: AS-5 access-category review documented — all models stay on
+  the implicit `@access.standard` (business/domain objects; none match the
+  ops/secret shape).
+- README: CI/coverage/PyPI badges.
+
 ## [0.1.1] — 2026-07-06
 
 ### Changed
@@ -77,5 +101,6 @@ FSM. Design: `docs/tasks-module.md` in the stapel workspace.
   alongside a stapel-core whose taskstore label is `stapel_taskstore`. See
   MODULE.md §"stapel-core requirement".
 
+[0.1.2]: https://github.com/usestapel/stapel-tasks/releases/tag/v0.1.2
 [0.1.1]: https://github.com/usestapel/stapel-tasks/releases/tag/v0.1.1
 [0.1.0]: https://github.com/usestapel/stapel-tasks/releases/tag/v0.1.0
