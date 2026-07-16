@@ -1,73 +1,14 @@
-"""URL patterns — no global prefix here, the host project mounts them:
+"""Root URLconf for stapel-tasks — v1 canon mount (api-versioning.md §2, §6).
 
-    path("tasks/", include("stapel_tasks.urls"))
+Canon: ``/<mod>/api/v1/...`` — the version segment sits right after ``api/``.
+The host mounts ``include('stapel_tasks.urls')`` under ``tasks/``; this
+module contributes the ``api/v1/`` prefix (the ``api/`` segment historically
+lives inside this package, not in the host mount). The actual URL set lives
+in ``urls_v1.py``.
 """
-from django.urls import path
+from django.urls import include, path
 
-from .views import (
-    BoardDetailView,
-    BoardListCreateView,
-    ChecklistItemStateView,
-    ChecklistListCreateView,
-    ColumnListCreateView,
-    ColumnReorderView,
-    CommentListCreateView,
-    TaskAssignView,
-    TaskDetailView,
-    TaskListCreateView,
-    TaskMoveView,
-)
 
 urlpatterns = [
-    path("api/boards", BoardListCreateView.as_view(), name="tasks-boards"),
-    path(
-        "api/boards/<uuid:board_id>",
-        BoardDetailView.as_view(),
-        name="tasks-board-detail",
-    ),
-    path(
-        "api/boards/<uuid:board_id>/columns",
-        ColumnListCreateView.as_view(),
-        name="tasks-columns",
-    ),
-    path(
-        "api/boards/<uuid:board_id>/columns/reorder",
-        ColumnReorderView.as_view(),
-        name="tasks-columns-reorder",
-    ),
-    path(
-        "api/boards/<uuid:board_id>/tasks",
-        TaskListCreateView.as_view(),
-        name="tasks-tasks",
-    ),
-    path(
-        "api/tasks/<uuid:task_id>",
-        TaskDetailView.as_view(),
-        name="tasks-task-detail",
-    ),
-    path(
-        "api/tasks/<uuid:task_id>/move",
-        TaskMoveView.as_view(),
-        name="tasks-task-move",
-    ),
-    path(
-        "api/tasks/<uuid:task_id>/assign",
-        TaskAssignView.as_view(),
-        name="tasks-task-assign",
-    ),
-    path(
-        "api/tasks/<uuid:task_id>/comments",
-        CommentListCreateView.as_view(),
-        name="tasks-task-comments",
-    ),
-    path(
-        "api/tasks/<uuid:task_id>/checklist",
-        ChecklistListCreateView.as_view(),
-        name="tasks-task-checklist",
-    ),
-    path(
-        "api/tasks/<uuid:task_id>/checklist/<uuid:item_id>/state",
-        ChecklistItemStateView.as_view(),
-        name="tasks-checklist-item-state",
-    ),
+    path('api/v1/', include('stapel_tasks.urls_v1')),
 ]

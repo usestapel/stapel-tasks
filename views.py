@@ -309,7 +309,7 @@ class BoardDetailView(SerializerSeamMixin, APIView):
 
         board.archived_at = timezone.now()
         board.save(update_fields=["is_archived", "archived_at", "updated_at"])
-        return StapelResponse({"status": "archived"})
+        return StapelResponse({"status": "archived"})  # noqa: R006
 
 
 # ── Column views ─────────────────────────────────────────────────────────
@@ -510,7 +510,7 @@ class TaskDetailView(SerializerSeamMixin, APIView):
         if (resp := _forbidden(request, WRITE, task.board)) is not None:
             return resp
         services.archive_task(task, actor=request.user)
-        return StapelResponse({"status": "archived"})
+        return StapelResponse({"status": "archived"})  # noqa: R006
 
 
 @extend_schema(tags=["Tasks"])
