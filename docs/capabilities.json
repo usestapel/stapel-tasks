@@ -1,0 +1,90 @@
+{
+  "module": "stapel-tasks",
+  "version": "0.1.5",
+  "provides": "Generic tasks and kanban boards: Board/Column/Task/ChecklistItem/TaskComment, a REST surface, a full outbox event surface, and custom fields via stapel-attributes. Usable standalone (a team runs a board by hand) or as the substrate an external orchestrator projects onto through opaque origin_* handles, a MOVE_POLICY authorization seam, and comm Functions (tasks.get/list_board/create/move/comment).",
+  "axes": [
+    {
+      "key": "SCOPE_PROVIDER",
+      "kind": "enum",
+      "default": "stapel_tasks.scope.DefaultScopeProvider",
+      "group": "tasks.tenancy",
+      "gates": {
+        "operations": [],
+        "co_gates": []
+      },
+      "curated": {
+        "summary": "Resolves the opaque workspace_id from a request, filters querysets by it, and answers viewer/member/admin permission checks. Default is a single global scope that allows everything; a stapel-workspaces-aware host swaps in a real provider — this module never imports stapel-workspaces (conf.py, MODULE.md Extension point 1).",
+        "business_label": "Multi-tenant scoping and permissions"
+      }
+    },
+    {
+      "key": "MOVE_POLICY",
+      "kind": "enum",
+      "default": "stapel_tasks.policy.AllowAllMovePolicy",
+      "group": "tasks.automation",
+      "gates": {
+        "operations": [],
+        "co_gates": []
+      },
+      "curated": {
+        "summary": "Decides whether a card may move from one column to another (drag-and-drop / tasks.move): allow / deny(reason_key) / defer (accepted but applied later by an external orchestrator). Default allows any move but honours a per-board transitions whitelist (conf.py, MODULE.md Extension point 2).",
+        "business_label": "Who/what may move a card between columns"
+      }
+    },
+    {
+      "key": "STORE_UNKNOWN_FEATURES",
+      "kind": "bool",
+      "default": true,
+      "group": "tasks.attributes",
+      "gates": {
+        "operations": [],
+        "co_gates": [],
+        "behavior": "When stapel-attributes is not installed (or a board declares no feature_defs), whether the custom-field seam stores the submitted DTO verbatim (true) or drops it (false)."
+      },
+      "curated": {
+        "summary": "Controls what happens to custom card fields when stapel-attributes isn't installed: keep the raw submitted data, or discard it.",
+        "business_label": "Keep unknown custom fields when typed validation is off"
+      }
+    }
+  ],
+  "extension_points": [
+    {
+      "name": "SCOPE_PROVIDER",
+      "kind": "dotted_path",
+      "summary": "REPLACE seam: a ScopeProvider subclass with resolve()/filter()/can() (scope.py). Guarded by system checks E001/E002 (MODULE.md Extension point 1)."
+    },
+    {
+      "name": "MOVE_POLICY",
+      "kind": "dotted_path",
+      "summary": "REPLACE seam: a MovePolicy subclass returning allow()/deny(reason_key)/defer() (policy.py). Guarded by E003/E004 (MODULE.md Extension point 2)."
+    },
+    {
+      "name": "BOARD_PRESETS",
+      "kind": "merge_registry",
+      "summary": "Open registry (STAPEL_TASKS['BOARD_PRESETS'] + register_board_preset(key, factory)) merged over the built-in 'simple' preset; None removes a built-in. Guarded by E005/E006 (MODULE.md Extension point 3)."
+    },
+    {
+      "name": "custom_field_seam",
+      "kind": "attribute_bridge",
+      "summary": "Board.feature_defs is a stapel-attributes FeatureDef list; Task.features holds the normalized DAO via services.create_task/update_task -> features.validate_features/normalize_features. Add vertical field types with attributes' own register_feature_type (MODULE.md Extension point 4)."
+    },
+    {
+      "name": "serializer_seams",
+      "kind": "class_override",
+      "summary": "Every APIView mixes in SerializerSeamMixin (request_serializer_class/response_serializer_class + get_* methods); the DTOs in dto.py are the API models, never ORM instances (views.py:60-68, MODULE.md Extension point 5)."
+    }
+  ],
+  "operations_total": 20,
+  "requires": [
+    {
+      "module": "stapel-core",
+      "optional": false,
+      "reason": "comm bus (task.* emits, tasks.* Functions, user.deleted consume for GDPR anonymization) (pyproject.toml dependency)"
+    },
+    {
+      "module": "stapel-attributes",
+      "optional": true,
+      "reason": "soft integration for typed custom-field validation on cards; module runs without it (feature seam degrades to a pass-through governed by STORE_UNKNOWN_FEATURES) (pyproject.toml optional-dependencies 'attributes' extra)"
+    }
+  ]
+}
