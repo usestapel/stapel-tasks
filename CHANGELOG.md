@@ -4,6 +4,14 @@ All notable changes to stapel-tasks are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0 semver: **minor = breaking**, patch = compatible.
 
+## [0.1.8] — 2026-08-02
+
+Fix-up: 0.1.7's `publish.yml` test gate never installed `stapel-tools`,
+unlike `ci.yml` — the new `docs/llms.txt` drift/determinism tests in
+`tests/test_contract.py` failed at the tag-triggered publish workflow
+(0.1.7 never reached PyPI). `publish.yml` now installs `stapel-tools`
+the same way `ci.yml` does. No other change.
+
 ## [0.1.7] — 2026-08-02
 
 Packaging/docs catch-up, no behavior change:
