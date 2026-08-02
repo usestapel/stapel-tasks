@@ -1,8 +1,11 @@
 # stapel-tasks
 
-[![CI](https://github.com/usestapel/stapel-tasks/actions/workflows/ci.yml/badge.svg)](https://github.com/usestapel/stapel-tasks/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/usestapel/stapel-tasks/graph/badge.svg)](https://codecov.io/gh/usestapel/stapel-tasks)
-[![PyPI](https://img.shields.io/pypi/v/stapel-tasks.svg)](https://pypi.org/project/stapel-tasks/)
+[![CI](https://img.shields.io/github/actions/workflow/status/usestapel/stapel-tasks/ci.yml?branch=main&logo=github&label=CI)](https://github.com/usestapel/stapel-tasks/actions/workflows/ci.yml?query=branch%3Amain)
+[![coverage](https://img.shields.io/codecov/c/github/usestapel/stapel-tasks?branch=main&logo=codecov&label=coverage)](https://app.codecov.io/gh/usestapel/stapel-tasks)
+[![pypi](https://img.shields.io/pypi/v/stapel-tasks?logo=pypi&logoColor=white&label=pypi)](https://pypi.org/project/stapel-tasks/)
+[![downloads](https://static.pepy.tech/badge/stapel-tasks/month)](https://pepy.tech/project/stapel-tasks)
+[![python](https://img.shields.io/pypi/pyversions/stapel-tasks?logo=python&logoColor=white)](https://pypi.org/project/stapel-tasks/)
+[![license](https://img.shields.io/github/license/usestapel/stapel-tasks)](https://github.com/usestapel/stapel-tasks/blob/main/LICENSE)
 
 Generic tasks and kanban boards for the [Stapel framework](https://github.com/usestapel) —
 composable Django apps that deploy as a monolith or as microservices without
