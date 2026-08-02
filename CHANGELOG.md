@@ -4,6 +4,17 @@ All notable changes to stapel-tasks are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0 semver: **minor = breaking**, patch = compatible.
 
+## [0.1.7] — 2026-08-02
+
+Packaging/docs catch-up, no behavior change:
+
+- Badge canon + Python 3.14 classifier; migration-lint enabled in CI.
+- `docs/llms.txt` — the fifth contract artifact (badge-canon §3),
+  rendered from the curated (hand-authored) `docs/capabilities.json` by
+  `stapel_tools.llms_txt`; `capabilities.json`'s `version` field brought
+  in sync with `pyproject.toml` (0.1.5 → 0.1.7), no other change to its
+  hand-authored content.
+
 ## [0.1.5] — 2026-07-17
 
 Fleet follow-up to stapel-core 0.12.0 (legacy shim sweep). No source
