@@ -2,7 +2,7 @@
 
 Generic tasks and kanban boards: Board/Column/Task/ChecklistItem/TaskComment, a REST surface, a full outbox event surface, and custom fields via stapel-attributes. Usable standalone (a team runs a board by hand) or as the substrate an external orchestrator projects onto through opaque origin_* handles, a MOVE_POLICY authorization seam, and comm Functions (tasks.get/list_board/create/move/comment).
 
-Contract: axes 3 · extension points 5.
+Contract: axes 3 · surface 27 · extension points 5.
 Generated from docs/capabilities.json by `stapel-llms-txt` — do not edit; drift-gated by `make contract-check`.
 
 ## Configuration axes — what a product switches on
@@ -13,6 +13,75 @@ Settings keys; `default` is what you get by saying nothing. Turning an axis off 
   Resolves the opaque workspace_id from a request, filters querysets by it, and answers viewer/member/admin permission checks. Default is a single global scope that allows everything; a stapel-workspaces-aware host swaps in a real provider — this module never imports stapel-workspaces (conf.py, MODULE.md Extension point 1).
 - STORE_UNKNOWN_FEATURES [bool, default true] — Keep unknown custom fields when typed validation is off
   Controls what happens to custom card fields when stapel-attributes isn't installed: keep the raw submitted data, or discard it.
+
+## Usage surface — call these before writing your own
+This is the answer to "does Stapel already have something for X?". `instead of` names the outside symbol this one displaces.
+### gate_function
+- add_checklist_item — stapel_tasks.services.add_checklist_item
+  instead of: ChecklistItem.objects.create()
+  Append a checklist step to a card, defaulting order to the current item count. Use this instead of ChecklistItem.objects.create() by hand to keep ordering contiguous.
+- add_column — stapel_tasks.services.add_column
+  Append (or insert at a given order) a single column on an existing board, defaulting order to the current count. Use this instead of Column.objects.create() by hand so the ordering stays contiguous with what reorder_columns produces.
+- add_comment — stapel_tasks.services.add_comment
+  instead of: TaskComment.objects.create()
+  Add a comment and emit task.comment_added — the human-to-orchestrator reply channel for a managed card. Call this rather than TaskComment.objects.create() directly whenever anything (a pipeline orchestrator) subscribes to the comment event.
+- archive_task — stapel_tasks.services.archive_task
+  instead of: Task.delete()
+  Soft-delete a card (is_archived + archived_at) and emit task.archived, idempotently. Use this instead of task.delete() — every positioning helper (create_task/move_task) already filters is_archived=False, so a hard-deleted-outside-this-call card breaks referential integrity for comments/checklist items that still point at it, where an archived one does not.
+- create_board — stapel_tasks.services.create_board
+  Create a board with its starting columns (an explicit list or a named preset) and a validated custom-field schema in one call. Reach for this instead of creating a Board row and its Columns by hand — feature_defs is validated through the attributes seam before anything is written, and an unknown preset raises KeyError up front rather than leaving a columnless board.
+- create_task — stapel_tasks.services.create_task
+  instead of: Task.objects.create()
+  Create a card: validates/normalizes custom-field values, appends it to the end of its column with a fresh fractional position, and emits task.created (plus task.completed if it lands straight in a DONE column) in one mutate_and_emit() unit. This is the creation path — Task.objects.create() skips validation, positioning and the event entirely.
+- delete_comment — stapel_tasks.services.delete_comment
+  Soft-delete a comment (blanks its body, no event) — deletion is intentionally not a domain fact anyone subscribes to. Use this instead of comment.delete() so readers see is_deleted rather than the row simply vanishing out from under a still-referencing thread.
+- get_board_presets — stapel_tasks.presets.get_board_presets
+  The effective preset map after merging built-ins, the STAPEL_TASKS['BOARD_PRESETS'] setting and runtime registrations. Call this instead of reading BUILTIN_PRESETS or the setting separately when rendering a 'choose a board preset' UI, so the list shown matches exactly what create_board(preset=...) will accept.
+- get_preset_columns — stapel_tasks.presets.get_preset_columns
+  Resolve one preset's column list without creating a board (raises KeyError for an unknown key). Use this to preview a preset's columns instead of calling create_board and discarding the result just to inspect its shape.
+- move_task — stapel_tasks.services.move_task
+  The one function that runs MOVE_POLICY, computes the target fractional position (rebalancing the column if precision is exhausted) and emits task.moved (+ task.completed/uncompletes on DONE-column transitions) as one commit. This is the only sanctioned way to change a card's column or position — assigning task.column directly skips the move-policy check (deny/defer) entirely.
+- normalize_features — stapel_tasks.features.normalize_features
+  instead of: stapel_attributes.normalize_to_dao
+  Turn a submitted custom-field DTO into the DAO stored on Task.features (display metadata injected), falling back to a raw pass-through or drop when attributes is absent per STORE_UNKNOWN_FEATURES. Call this rather than stapel-attributes' normalizer directly so a card's stored shape matches what the built-in views/services produce even on a host without the attributes engine installed.
+- position_between — stapel_tasks.positioning.position_between
+  Compute a fractional index that sorts strictly between two neighbouring positions (either may be None at a column edge). Reach for this instead of designing your own fractional/lexicographic ordering scheme for any other drag-and-drop-orderable list in your product — it is the exact midpoint algorithm stapel-tasks itself uses for card positions, edge cases included.
+- reorder_columns — stapel_tasks.services.reorder_columns
+  Reorder a board's columns from a list of keys in one bulk_update, any column not listed keeping trailing order. Call this instead of writing per-column .save(update_fields=['order']) loops for a drag-and-drop column-reorder UI.
+- reset_presets — stapel_tasks.presets.reset_presets
+  Drop every runtime-registered preset. Call this in test teardown/fixtures so register_board_preset calls from one test never leak into the next — it does not touch the STAPEL_TASKS['BOARD_PRESETS'] setting, only the runtime layer.
+- set_assignees — stapel_tasks.services.set_assignees
+  instead of: Task.assignees.set()
+  Replace a card's assignee set, emitting one task.assigned event per user added/removed rather than a single batch change. Call this instead of task.assignees.set(...) directly whenever anything downstream (notifications, an orchestrator) needs per-user assignment events.
+- set_board_feature_defs — stapel_tasks.services.set_board_feature_defs
+  Replace a board's custom-field schema, validated via the attributes seam before the write reaches Board.feature_defs. Use this instead of assigning the field directly and saving — a structurally broken schema must never reach existing cards unvalidated.
+- set_checklist_item_state — stapel_tasks.services.set_checklist_item_state
+  Set a checklist step's state and emit task.checklist_item_changed — the QA channel a projector watches for a FAILED step (a real state, not a missing DONE). Reach for this instead of item.save() directly whenever anything downstream needs to react to a state change; it also rejects any value outside pending/done/failed.
+- update_task — stapel_tasks.services.update_task
+  Patch a card's scalar fields and/or custom-field values, emitting task.updated with the precise changed-field list, and touching only fields that actually differ. Use this instead of task.save(update_fields=...) by hand so the write and the event commit as one unit and changed_fields is accurate rather than guessed.
+- upsert_task_by_origin — stapel_tasks.services.upsert_task_by_origin
+  instead of: Task.objects.get_or_create()
+  Idempotent create-or-update by (board, origin_type, origin_ref) — the single entry point an external orchestrator should call to project a pipeline state into a card, race-safe under concurrent projections (the create-race loser falls back to an update instead of raising IntegrityError). Reach for this instead of a manual get_or_create: Django's own get_or_create does not know the uniqueness constraint is conditional (origin_ref must be non-empty) nor run create_task's validation/positioning on the create branch.
+- validate_feature_defs — stapel_tasks.features.validate_feature_defs
+  instead of: stapel_attributes.validate_configs_structured
+  Validate a board's custom-field *schema itself* (not a value) before it is saved to Board.feature_defs — call this on any path that edits the schema outside set_board_feature_defs, so a structurally broken schema never reaches cards.
+- validate_features — stapel_tasks.features.validate_features
+  instead of: stapel_attributes.validate_dto
+  Validate a submitted custom-field DTO against a board's feature_defs schema (a no-op when the board declares none or attributes is absent), raising FeatureValidationError with one message per bad field. Call this before persisting card custom-field values from any write path other than the built-in serializers/services — calling stapel-attributes directly skips the 'no schema declared' / 'attributes not installed' no-op guard this seam exists for.
+### predicate
+- attributes_available — stapel_tasks.features.attributes_available
+  Whether stapel-attributes is importable right now — the one place that decides whether the custom-field seam runs real validation or falls back to the STORE_UNKNOWN_FEATURES pass-through/drop. Check this before assuming validate_features/normalize_features will actually enforce a schema in this environment.
+- needs_rebalance — stapel_tasks.positioning.needs_rebalance
+  True when no representable position exists between two interior neighbours at the field's 20-decimal-place precision — the repeated-midpoint exhaustion case. Call this before trusting a plain position_between() result on an interior insert; skipping it is how positions silently collapse onto a neighbour after enough drags into the same gap.
+### factory
+- get_move_policy — stapel_tasks.policy.get_move_policy
+  Resolve the configured MovePolicy instance. Call this instead of importing a specific policy class directly whenever custom code needs to run the same allow/deny/defer check the built-in tasks.move Function and TaskMoveView use before applying a move.
+- get_scope_provider — stapel_tasks.scope.get_scope_provider
+  Resolve the configured ScopeProvider instance. Call this instead of importing a specific provider class directly whenever custom code (a management command, a non-DRF view) needs to resolve/filter by workspace_id or run the same permission check the built-in views use.
+- rebalanced_positions — stapel_tasks.positioning.rebalanced_positions
+  Evenly spaced integer positions for a full-column renumber — the rare O(n) fallback once needs_rebalance signals precision exhaustion. Use this (paired with needs_rebalance) instead of inventing your own renumbering step for any other fractional-position list you build on the same scheme.
+- register_board_preset — stapel_tasks.presets.register_board_preset
+  Register or override a board-shape preset at runtime (equivalent to putting the same key in STAPEL_TASKS['BOARD_PRESETS']) — the fork-free way to add or replace a preset a host's boards can be created with. Pass factory=None to remove a built-in.
 
 ## Extension points — what a product replaces, fork-free
 - BOARD_PRESETS [merge_registry]
