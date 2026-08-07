@@ -179,8 +179,18 @@ def _get_task(request, task_id):
 
 
 class TaskPagination(CreatedAtAnchorPagination):
-    page_size = 100
+    # `page_size` был литералом 100 при существующей настройке
+    # `DEFAULT_PAGE_SIZE` с тем же значением — то есть настройку никто не
+    # читал, и выставленная в развёртывании она не делала ничего (CFG006).
+    # Свойство, а не атрибут класса: `AppSettings` разрешает ключ в момент
+    # обращения, и вычисление на импорте вморозило бы значение до рестарта,
+    # заодно сломав `override_settings` в тестах.
     max_page_size = 500
+
+    @property
+    def page_size(self):
+        from .conf import tasks_settings
+        return tasks_settings.DEFAULT_PAGE_SIZE
 
 
 # ── Board views ──────────────────────────────────────────────────────────
