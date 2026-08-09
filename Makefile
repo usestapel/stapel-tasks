@@ -13,15 +13,23 @@ PYTHON ?= python3
 #
 # Then docs/llms.txt, the fifth contract artifact (stapel_tools.llms_txt),
 # rendered straight from the docs/capabilities.json the step above produces.
+#
+# README.md is the SIXTH artifact (tracker #257): assembled by
+# stapel_tools.readme from docs/readme.md (the human half — what this module
+# is, how to think about it) plus everything emitted above. Badges, version,
+# surface counts and doc links are generated, so a release cannot leave them
+# behind. Edit docs/readme.md; never README.md.
 .PHONY: contract contract-check migration-lint
 
 contract:
 	$(PYTHON) -m stapel_tools.surface . --patch
 	$(PYTHON) -m stapel_tools.llms_txt .
+	$(PYTHON) -m stapel_tools.readme .
 
 contract-check:
 	$(PYTHON) -m stapel_tools.surface . --patch --check
 	$(PYTHON) -m stapel_tools.llms_txt . --check
+	$(PYTHON) -m stapel_tools.readme . --check
 
 # Expand/contract gate for Django migrations (release-management.md §3;
 # stapel_tools.migration_lint). Requires stapel-tools importable (the
