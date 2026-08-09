@@ -179,12 +179,10 @@ def _get_task(request, task_id):
 
 
 class TaskPagination(CreatedAtAnchorPagination):
-    # `page_size` был литералом 100 при существующей настройке
-    # `DEFAULT_PAGE_SIZE` с тем же значением — то есть настройку никто не
-    # читал, и выставленная в развёртывании она не делала ничего (CFG006).
-    # Свойство, а не атрибут класса: `AppSettings` разрешает ключ в момент
-    # обращения, и вычисление на импорте вморозило бы значение до рестарта,
-    # заодно сломав `override_settings` в тестах.
+    # `page_size` was hardcoded to 100 while `DEFAULT_PAGE_SIZE` sat unread
+    # at the same value (CFG006). Property, not a class attribute:
+    # `AppSettings` resolves at access time — resolving at import would
+    # freeze the value until restart and break `override_settings` in tests.
     max_page_size = 500
 
     @property
