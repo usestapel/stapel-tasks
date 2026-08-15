@@ -18,6 +18,7 @@ ERR_404_TASK_NOT_FOUND = "error.404.tasks_task_not_found"
 ERR_404_COMMENT_NOT_FOUND = "error.404.tasks_comment_not_found"
 ERR_404_CHECKLIST_ITEM_NOT_FOUND = "error.404.tasks_checklist_item_not_found"
 ERR_409_TRANSITION_NOT_ALLOWED = "error.409.tasks_transition_not_allowed"
+ERR_503_SCOPE_UNRESOLVED = "error.503.tasks_scope_unresolved"
 
 STAPEL_TASKS_ERRORS = {
     ERR_400_INVALID_FEATURES: "Invalid custom-field values for this board",
@@ -33,6 +34,7 @@ STAPEL_TASKS_ERRORS = {
     ERR_404_COMMENT_NOT_FOUND: "Comment not found",
     ERR_404_CHECKLIST_ITEM_NOT_FOUND: "Checklist item not found",
     ERR_409_TRANSITION_NOT_ALLOWED: "This move is not allowed by the board workflow",
+    ERR_503_SCOPE_UNRESOLVED: "Cannot determine which workspace this board belongs to",
 }
 
 register_service_errors(STAPEL_TASKS_ERRORS)
@@ -52,4 +54,5 @@ __all__ = [
     "ERR_404_COMMENT_NOT_FOUND",
     "ERR_404_CHECKLIST_ITEM_NOT_FOUND",
     "ERR_409_TRANSITION_NOT_ALLOWED",
+    "ERR_503_SCOPE_UNRESOLVED",
 ]

@@ -5,17 +5,22 @@ service cannot run with; W-level for entries that only degrade lazily.
 
 - SCOPE_PROVIDER unimportable / not a ScopeProvider -> E (every request
   needs it to resolve/filter scope and check permissions).
+- SCOPE_PROVIDER still the shipped single-scope default while this deployment
+  has workspaces -> E; standalone -> W. Importability and type were the only
+  things ever validated here, so nothing said a multi-tenant host was running
+  the provider that puts every board in one scope.
 - MOVE_POLICY unimportable / not a MovePolicy -> E (every move needs it).
 - BOARD_PRESETS entries must be callable or None -> E (board creation from a
   broken preset would crash).
 """
 from django.core import checks
+from stapel_core.django.scope import check_shipped_scope_provider
 
 
 @checks.register(checks.Tags.compatibility)
 def check_scope_provider(app_configs, **kwargs):
     from .conf import tasks_settings
-    from .scope import ScopeProvider
+    from .scope import DefaultScopeProvider, ScopeProvider
 
     try:
         provider = tasks_settings.SCOPE_PROVIDER
@@ -34,7 +39,16 @@ def check_scope_provider(app_configs, **kwargs):
                 id="stapel_tasks.E002",
             )
         ]
-    return []
+    # Importable and correctly typed says nothing about whether the shipped
+    # single-scope provider is still carrying a multi-tenant deployment.
+    return check_shipped_scope_provider(
+        setting="STAPEL_TASKS['SCOPE_PROVIDER']",
+        provider=provider,
+        shipped_cls=DefaultScopeProvider,
+        error_id="stapel_tasks.E007",
+        warning_id="stapel_tasks.W001",
+        isolates="board and card",
+    )
 
 
 @checks.register(checks.Tags.compatibility)

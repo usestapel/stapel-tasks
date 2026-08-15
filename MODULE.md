@@ -83,12 +83,27 @@ subclass with three methods:
 - `filter(queryset, request)` — restrict a queryset to the visible scope;
 - `can(request, action, board=None) -> bool` — permission check for
   `READ` / `WRITE` / `ADMIN` (the constants in `stapel_tasks.scope`).
+  Answer False for "no"; raise `MandateUnavailable` (503) for "could not find
+  out" — a lookup that failed is not a permission that was granted.
 
-The default `DefaultScopeProvider` is a single global scope that allows
-everything. A stapel-workspaces-aware host swaps in a provider that reads the
-active `workspace_id` and checks roles (viewer→READ, member→WRITE,
-admin→ADMIN). This module never imports stapel-workspaces — the host's
-provider does. Guarded by system checks `E001`/`E002`.
+The default `DefaultScopeProvider` is a single global scope. Its `can` no
+longer answers True unconditionally: it answers with the third principal state
+(`stapel_core.django.scope`), so a registered account holding no mandate in
+any workspace is refused, and `filter` returns nothing for it. Where nothing
+can answer the mandate question at all, the permissive single-tenant behaviour
+stands.
+
+Board creation refuses (503 `error.503.tasks_scope_unresolved`) when `resolve`
+returns `None` in a deployment that knows what a workspace is: `NULL` tenancy
+is valid in the table and legitimate for a single-tenant host, but in a
+multi-tenant one it is a board no membership check can ever reach.
+
+A stapel-workspaces-aware host swaps in a provider that reads the active
+`workspace_id` and checks roles (viewer→READ, member→WRITE, admin→ADMIN). This
+module never imports stapel-workspaces — the host's provider does. Guarded by
+system checks `E001`/`E002` and `E007`/`W001` (running the shipped
+single-scope provider is an ERROR where this deployment has workspaces, a
+warning where it is genuinely standalone).
 
 ### 2. `MOVE_POLICY` — drag-and-drop authorization (dotted path, REPLACE)
 

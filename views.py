@@ -10,6 +10,7 @@ from rest_framework import permissions, status
 from rest_framework.views import APIView
 from stapel_core.django.api.errors import StapelErrorResponse, StapelResponse
 from stapel_core.django.api.pagination import CreatedAtAnchorPagination
+from stapel_core.django.scope import deployment_is_standalone
 
 from . import services
 from .dto import (
@@ -31,6 +32,7 @@ from .errors import (
     ERR_404_CHECKLIST_ITEM_NOT_FOUND,
     ERR_404_COLUMN_NOT_FOUND,
     ERR_404_TASK_NOT_FOUND,
+    ERR_503_SCOPE_UNRESOLVED,
 )
 from .features import FeatureValidationError
 from .models import Board, ChecklistItem, Column, Task
@@ -225,6 +227,12 @@ class BoardListCreateView(SerializerSeamMixin, APIView):
             if columns is None:
                 return StapelErrorResponse(400, ERR_400_INVALID_COLUMN)
         workspace_id = get_scope_provider().resolve(request)
+        # NULL tenancy is valid in the table and legitimate in a host with
+        # exactly one tenant. In a deployment that KNOWS what a workspace is,
+        # it is a board no membership check can ever reach — a scope nobody
+        # owns. Refuse the write rather than create the limbo.
+        if workspace_id is None and not deployment_is_standalone():
+            return StapelErrorResponse(503, ERR_503_SCOPE_UNRESOLVED)
         try:
             board = services.create_board(
                 name=data.name,
