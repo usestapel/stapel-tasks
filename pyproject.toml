@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stapel-tasks"
-version = "0.1.9"
+version = "0.2.0"
 description = "Generic tasks and kanban boards for the Stapel framework"
 readme = "README.md"
 license = { text = "MIT" }
@@ -25,7 +25,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "stapel-core>=0.10,<1.0",
+    # Floor: 0.27.0 ships django/scope.py — MandateScopeMixin and
+    # check_shipped_scope_provider — which the scope seam and its system
+    # checks are built on.
+    "stapel-core>=0.27.0,<1.0",
     "djangorestframework>=3.14",
     "drf-spectacular>=0.27",
 ]

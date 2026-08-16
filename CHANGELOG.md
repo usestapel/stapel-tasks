@@ -4,6 +4,36 @@ All notable changes to stapel-tasks are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0 semver: **minor = breaking**, patch = compatible.
 
+## [0.2.0] — 2026-08-16
+
+### Security — the tenancy seam has a third answer
+
+`DefaultScopeProvider.can` returned `True` unconditionally, so all eleven views
+asked a question with exactly one possible answer. It now answers with the
+third principal state (`stapel_core.django.scope`): a registered account
+holding no mandate anywhere is not a member of one global scope, it is a member
+of nothing. Where nothing can answer the question — a genuinely standalone
+deployment — the permissive behaviour stands, and `checks.py` says so out loud
+instead of leaving it implied.
+
+- `error.503.tasks_scope_unresolved` (`ERR_503_SCOPE_UNRESOLVED`): a lookup
+  that failed is not a permission that was granted. `ScopeProvider.can`
+  documents `MandateUnavailable` as the way to say "could not find out".
+- Board creation with NULL tenancy is refused where a workspace is expected —
+  a board belonging to no workspace is visible to everyone who can list.
+- New system checks for the shipped single-scope default carrying a
+  multi-tenant host.
+
+**Breaking** (pre-1.0: minor = breaking): a custom provider that answered
+`can` with a bare `False` on lookup failure now hides a fault as a denial;
+raise `MandateUnavailable` instead. Deployments where guests could reach
+boards will see them refused.
+
+### Changed — `stapel-core` floor raised to 0.27.0
+
+The floor had been `>=0.10` since long before this module used any of core's
+tenancy machinery. `django/scope.py` exists only in 0.27.0.
+
 ## [0.1.8] — 2026-08-02
 
 Fix-up: 0.1.7's `publish.yml` test gate never installed `stapel-tools`,
