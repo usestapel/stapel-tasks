@@ -33,7 +33,24 @@
 - **Event surface + comm Functions** — all mutations emit through the outbox;
   Functions mirror the service layer for microservice topologies / MCP tools.
 - **REST API** — boards/columns/tasks/comments/checklist, DTO + serializer
-  seams, scope+permission seam, anchor pagination, OpenAPI.
+  seams, scope+permission seam, anchor pagination, OpenAPI. Two reads of the
+  same cards, on purpose: `GET boards/{id}/tasks` is a keyset **feed**
+  (`-created_at`), `GET boards/{id}/cards` is the **board shape** — columns in
+  order, cards grouped by column key and sorted by `position`, capped by
+  `BOARD_CARDS_MAX` with a `truncated` flag. A kanban client reads the latter
+  in one round trip; both go through the one `services.board_cards`, which the
+  `tasks.list_board` Function also uses, so the two transports cannot disagree.
+- **Discoverable vocabularies** — `GET boards/presets` serves the effective
+  preset registry (built-ins + whatever the host merged in), the fixed column
+  categories and checklist states, and the configured `PRIORITY_SCALE`. A
+  board-creation form needs facts a host can change at runtime; guessing them
+  from a hard-coded list in the client is how a client and a deployment drift.
+- **Contract triad** — `make contract` emits `docs/schema.json`,
+  `docs/flows.json` and `docs/errors.json` from a single-module
+  `{tasks + core}` instance mounted at the canonical `/tasks/api/v1/` prefix
+  (`_codegen.py`), plus `translations/errors.{ru,es}.json`. These are the
+  files `@stapel/tasks-react`'s `gen:api` / `gen:flows` / `gen:errors` read;
+  `make contract-check` (and `tests/test_contract.py`) fail on drift.
 - **GDPR** — a `user.deleted` consumer that *anonymizes* (cards are shared
   team artifacts).
 
@@ -125,7 +142,9 @@ merge **over** the built-in `simple` preset (a `factory` is a zero-arg
 callable returning `list[ColumnSpec]`; `None` removes a built-in). Only the
 mechanism (registry + category vocabulary) is open — a specific set of
 pipeline states is private product semantics registered by the host that owns
-it, never shipped here. Guarded by `E005`/`E006`.
+it, never shipped here. Guarded by `E005`/`E006`. Whatever a host merges in
+becomes visible to clients through `GET boards/presets` — the registry is the
+one source, no second list to keep in sync.
 
 ### 4. Custom-field seam (`features.py`, soft attributes integration)
 

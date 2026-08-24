@@ -1,36 +1,109 @@
-"""docs/llms.txt drift gate — the fifth contract artifact (badge-canon §3).
+"""Contract drift gates — the triad, llms.txt and README.md.
 
-stapel-tasks has no per-module ``_codegen.py``/``_capabilities.py`` pipeline
-yet: ``docs/capabilities.json`` here is HAND-AUTHORED (see the "docs: author
-capabilities.json for the stapel-catalog sweep" commit), not emitted. There is
-therefore no triad/capabilities drift gate to run in this file — that arrives
-with the codegen pipeline, not before it.
+Since 0.3.0 this module emits its OWN contract triad (``_codegen.py`` /
+``make contract``): ``docs/schema.json`` + ``docs/flows.json`` +
+``docs/errors.json``, from a single-module {tasks + core} Django instance
+mounted at the canonical ``/tasks/api/v1/`` prefix. ``@stapel/tasks-react``'s
+``gen:api`` / ``gen:flows`` / ``gen:errors`` read exactly these files, so a
+view whose serializer changed and whose docs did not is a red test here, not
+a surprise in the frontend's generated types.
 
-What this file DOES gate is ``docs/llms.txt``, rendered from that curated
-capabilities.json by ``stapel_tools.llms_txt``. It is a pure function of the
-committed ``docs/*.json`` files, so the same regenerate-and-diff discipline
-applies without needing Django, a codegen harness or a subprocess per se —
-one is used anyway (mirrors every other module's ``make contract-check``, and
-keeps this test honest about running exactly what the Makefile runs).
+``docs/capabilities.json`` stays HAND-AUTHORED apart from ``module``/
+``version``/``surface`` (there is no ``_capabilities.py`` emitter) — that
+half is gated in ``test_capabilities_surface.py``.
 
-Regenerate after any edit to ``docs/capabilities.json``:
+``docs/llms.txt`` is rendered from the triad plus that capabilities.json;
+README.md is assembled from ``docs/readme.md`` plus everything above.
 
-    make contract        # or: python -m stapel_tools.llms_txt .
+Regenerate after any change to a view, serializer, flow or error key:
+
+    make contract
 """
+import json
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parent.parent
 DOCS = REPO / "docs"
+
+# The Makefile raises the llms.txt ceiling deliberately; the gate has to run
+# the SAME budget it does, or it measures a different artifact.
+LLMS_BUDGET = "7000"
+
+TRIAD = ("schema.json", "flows.json", "errors.json")
 
 
 def _emit(out_dir: Path) -> None:
     subprocess.run(
-        [sys.executable, "-m", "stapel_tools.llms_txt", str(REPO), "--out", str(out_dir)],
+        [sys.executable, "-m", "stapel_tools.llms_txt", str(REPO),
+         "--out", str(out_dir), "--budget", LLMS_BUDGET],
         check=True,
         capture_output=True,
     )
+
+
+def _emit_triad(out_dir: Path) -> None:
+    """Run the module's own contract harness into ``out_dir``."""
+    subprocess.run(
+        [sys.executable, "-m", "stapel_tasks._codegen", "--out", str(out_dir)],
+        check=True,
+        capture_output=True,
+        cwd=str(REPO),
+    )
+
+
+@pytest.mark.parametrize("name", TRIAD)
+def test_triad_artifact_is_committed(name):
+    assert (DOCS / name).is_file(), f"missing docs/{name} — run `make contract`"
+
+
+@pytest.mark.parametrize("name", TRIAD)
+def test_triad_has_no_drift(tmp_path, name):
+    """Regenerate the triad; each committed file must match byte-for-byte."""
+    _emit_triad(tmp_path)
+    assert (DOCS / name).read_bytes() == (tmp_path / name).read_bytes(), (
+        f"docs/{name} drifted — run `make contract` and commit it"
+    )
+
+
+def test_schema_carries_the_board_shaped_read():
+    """The pair binds `GET boards/{id}/cards`; the schema must describe it.
+
+    A schema that merely *has* the path is not enough — drf-spectacular
+    silently falls back to an untyped body when an APIView carries no
+    `responses=`, which is exactly how a generated client ends up with
+    `unknown` where the board should be.
+    """
+    schema = json.loads((DOCS / "schema.json").read_text())
+    op = schema["paths"]["/tasks/api/v1/boards/{board_id}/cards"]["get"]
+    ref = op["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    assert ref.endswith("/BoardCardsResponse")
+    cards = schema["components"]["schemas"]["BoardCardsResponse"]
+    assert set(cards["properties"]) >= {"board_id", "columns", "cards", "truncated"}
+
+
+def test_errors_registry_carries_the_column_conflict_key():
+    codes = {e["code"] for e in json.loads((DOCS / "errors.json").read_text())}
+    assert "error.409.tasks_column_exists" in codes
+
+
+@pytest.mark.parametrize("lang", ["ru", "es"])
+def test_locale_catalog_covers_every_owned_key(lang):
+    """gen:errors demands a catalog entry for every key this module OWNS.
+
+    A missing one is a raw i18n key rendered at a user, so the gate lives
+    here rather than in the frontend's generator.
+    """
+    from stapel_tasks.errors import STAPEL_TASKS_ERRORS
+
+    catalog = json.loads((REPO / "translations" / f"errors.{lang}.json").read_text())
+    missing = sorted(set(STAPEL_TASKS_ERRORS) - set(catalog))
+    assert not missing, f"translations/errors.{lang}.json is missing: {missing}"
+    extra = sorted(set(catalog) - set(STAPEL_TASKS_ERRORS))
+    assert not extra, f"translations/errors.{lang}.json carries foreign keys: {extra}"
 
 
 def test_llms_txt_committed():

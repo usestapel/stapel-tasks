@@ -26,6 +26,10 @@ The extension seams (see MODULE.md):
 - ``STORE_UNKNOWN_FEATURES`` — when stapel-attributes is not installed (or a
   board declares no ``feature_defs``), whether the feature seam stores the
   submitted custom-field DTO verbatim (``True``) or drops it (``False``).
+- ``PRIORITY_SCALE`` — the priority vocabulary served by
+  ``GET boards/presets``. The stored ``priority`` stays an unconstrained
+  int; this is the list a generic client offers.
+- ``BOARD_CARDS_MAX`` — cap on the un-paginated whole-board read.
 """
 from stapel_core.conf import AppSettings
 
@@ -43,6 +47,21 @@ tasks_settings = AppSettings(
         "BOARD_PRESETS": {},
         # Default page size for the paginated board/task listing.
         "DEFAULT_PAGE_SIZE": 100,
+        # Hard cap on the un-paginated whole-board read
+        # (GET boards/{id}/cards). A board past the cap answers with the
+        # newest BOARD_CARDS_MAX cards and `truncated: true` — a kanban view
+        # is a bounded surface, and a client that must show more filters.
+        "BOARD_CARDS_MAX": 2000,
+        # The priority vocabulary served by GET boards/presets. `priority`
+        # is an unconstrained int in the table on purpose (a host may run a
+        # 1..10 scale); this is what a generic client renders as a picker.
+        # Each entry is {"value": int, "label_key": str}.
+        "PRIORITY_SCALE": [
+            {"value": 1, "label_key": "tasks.priority.low"},
+            {"value": 2, "label_key": "tasks.priority.normal"},
+            {"value": 3, "label_key": "tasks.priority.high"},
+            {"value": 4, "label_key": "tasks.priority.urgent"},
+        ],
         # When attributes is absent, keep the raw custom-field DTO on the
         # card (soft seam) rather than dropping it.
         "STORE_UNKNOWN_FEATURES": True,

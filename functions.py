@@ -59,40 +59,31 @@ def list_board(payload):
     Output: ``{"board_id", "columns": [{"key","name","category","order"}],
     "cards": {column_key: [<card>, ...]}}``.
     """
-    from .models import Board, Task
+    from .models import Board
+    from . import services
 
     board = Board.objects.filter(id=payload["board_id"]).first()
     if board is None:
         return {"board_id": payload["board_id"], "columns": [], "cards": {}}
 
-    columns = list(board.columns.order_by("order"))
-    qs = (
-        Task.objects.select_related("column")
-        .prefetch_related("assignees")
-        .filter(board=board)
-        .order_by("position", "created_at", "id")
+    # One implementation for the grouped board read: the HTTP
+    # `GET boards/{id}/cards` and this Function must not answer in different
+    # orders for the same board.
+    columns, grouped, _truncated = services.board_cards(
+        board,
+        column=payload.get("column"),
+        category=payload.get("category"),
+        assignee_id=payload.get("assignee_id"),
+        origin_ref=payload.get("origin_ref"),
+        include_archived=bool(payload.get("include_archived")),
     )
-    if not payload.get("include_archived"):
-        qs = qs.filter(is_archived=False)
-    if payload.get("column"):
-        qs = qs.filter(column__key=payload["column"])
-    if payload.get("category"):
-        qs = qs.filter(column__category=payload["category"])
-    if payload.get("assignee_id"):
-        qs = qs.filter(assignees__pk=payload["assignee_id"])
-    if payload.get("origin_ref"):
-        qs = qs.filter(origin_ref=payload["origin_ref"])
-
-    cards: dict[str, list] = {c.key: [] for c in columns}
-    for task in qs.distinct():
-        cards.setdefault(task.column.key, []).append(_card(task))
     return {
         "board_id": str(board.id),
         "columns": [
             {"key": c.key, "name": c.name, "category": c.category, "order": c.order}
             for c in columns
         ],
-        "cards": cards,
+        "cards": {key: [_card(t) for t in tasks] for key, tasks in grouped.items()},
     }
 
 

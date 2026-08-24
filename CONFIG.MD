@@ -23,4 +23,6 @@ scaffolder.
 | MOVE_POLICY | env | dotted path to a MovePolicy (allow/deny/defer a card move). Default allows any move. | no | stapel_tasks.policy.AllowAllMovePolicy |
 | BOARD_PRESETS | env | board-shape presets merged OVER the built-ins (callable → list[ColumnSpec]); None removes. | no | {} |
 | DEFAULT_PAGE_SIZE | env | default page size for the paginated board/task listing. | no | 100 |
+| BOARD_CARDS_MAX | env | cap on the un-paginated whole-board read (`GET boards/{id}/cards`); past it the answer carries `truncated: true`. | no | 2000 |
+| PRIORITY_SCALE | env | priority steps served by `GET boards/presets` (`[{value, label_key}]`); the stored `priority` itself stays an unconstrained int. | no | low/normal/high/urgent (1-4) |
 | STORE_UNKNOWN_FEATURES | env | when stapel-attributes is absent (or a board declares no feature_defs), keep the raw custom-field DTO on the card rather than dropping it. | no | true |

@@ -6,6 +6,8 @@ these are the defaults.
 from stapel_core.django.api.serializers import StapelDataclassSerializer
 
 from .dto import (
+    ArchivedResponse,
+    BoardCardsResponse,
     BoardCreateRequest,
     BoardResponse,
     BoardUpdateRequest,
@@ -13,6 +15,7 @@ from .dto import (
     ChecklistItemResponse,
     ChecklistItemStateRequest,
     ColumnCreateRequest,
+    BoardVocabularyResponse,
     ColumnReorderRequest,
     ColumnResponse,
     CommentCreateRequest,
@@ -21,6 +24,7 @@ from .dto import (
     TaskAssignRequest,
     TaskCreateRequest,
     TaskMoveRequest,
+    TaskPageResponse,
     TaskResponse,
     TaskUpdateRequest,
 )
@@ -49,6 +53,26 @@ class TaskResponseSerializer(StapelDataclassSerializer):
 class BoardResponseSerializer(StapelDataclassSerializer):
     class Meta:
         dataclass = BoardResponse
+
+
+class ArchivedResponseSerializer(StapelDataclassSerializer):
+    class Meta:
+        dataclass = ArchivedResponse
+
+
+class TaskPageResponseSerializer(StapelDataclassSerializer):
+    class Meta:
+        dataclass = TaskPageResponse
+
+
+class BoardCardsResponseSerializer(StapelDataclassSerializer):
+    class Meta:
+        dataclass = BoardCardsResponse
+
+
+class BoardVocabularyResponseSerializer(StapelDataclassSerializer):
+    class Meta:
+        dataclass = BoardVocabularyResponse
 
 
 class MoveResponseSerializer(StapelDataclassSerializer):

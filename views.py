@@ -5,21 +5,30 @@ checks go through the ``SCOPE_PROVIDER`` seam; moves go through
 ``MOVE_POLICY`` (inside :func:`services.move_task`). Every mutation the views
 trigger emits its event via the outbox (in the service layer).
 """
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import permissions, status
 from rest_framework.views import APIView
 from stapel_core.django.api.errors import StapelErrorResponse, StapelResponse
 from stapel_core.django.api.pagination import CreatedAtAnchorPagination
 from stapel_core.django.scope import deployment_is_standalone
+from stapel_core.flows import flow_step
 
 from . import services
 from .dto import (
+    ArchivedResponse,
+    BoardCardsResponse,
+    BoardPresetResponse,
     BoardResponse,
+    BoardVocabularyResponse,
     ChecklistItemResponse,
     ColumnResponse,
     CommentResponse,
     MoveResponse,
+    PresetColumnResponse,
+    PriorityLevelResponse,
     TaskResponse,
+    VocabularyTermResponse,
 )
 from .errors import (
     ERR_400_INVALID_CHECKLIST_STATE,
@@ -32,16 +41,21 @@ from .errors import (
     ERR_404_CHECKLIST_ITEM_NOT_FOUND,
     ERR_404_COLUMN_NOT_FOUND,
     ERR_404_TASK_NOT_FOUND,
+    ERR_409_COLUMN_EXISTS,
     ERR_503_SCOPE_UNRESOLVED,
 )
 from .features import FeatureValidationError
-from .models import Board, ChecklistItem, Column, Task
+from .flows import BOARD_SETUP, CARD_LIFECYCLE, CARD_MOVE
+from .models import Board, ChecklistItem, ChecklistState, Column, ColumnCategory, Task
 from .policy import ALLOW, DEFER, DENY
 from .scope import ADMIN, READ, WRITE, get_scope_provider
 from .serializers import (
+    ArchivedResponseSerializer,
+    BoardCardsResponseSerializer,
     BoardCreateRequestSerializer,
     BoardResponseSerializer,
     BoardUpdateRequestSerializer,
+    BoardVocabularyResponseSerializer,
     ChecklistItemCreateRequestSerializer,
     ChecklistItemResponseSerializer,
     ChecklistItemStateRequestSerializer,
@@ -54,6 +68,7 @@ from .serializers import (
     TaskAssignRequestSerializer,
     TaskCreateRequestSerializer,
     TaskMoveRequestSerializer,
+    TaskPageResponseSerializer,
     TaskResponseSerializer,
     TaskUpdateRequestSerializer,
 )
@@ -197,6 +212,70 @@ class TaskPagination(CreatedAtAnchorPagination):
 
 
 @extend_schema(tags=["Tasks"])
+class BoardVocabularyView(SerializerSeamMixin, APIView):
+    """Serve the vocabularies a board-creation form needs.
+
+    Preset keys, the fixed column categories, the checklist states and the
+    configured priority scale are all facts a client cannot otherwise
+    discover: presets are an open merge registry (a host adds its own), and
+    ``priority`` is an unconstrained int in the table.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    response_serializer_class = BoardVocabularyResponseSerializer
+
+    @extend_schema(
+        summary="Board presets and vocabularies",
+        responses={200: BoardVocabularyResponseSerializer},
+    )
+    @flow_step(BOARD_SETUP, order=1,
+               note="The form discovers presets, categories and the priority scale")
+    def get(self, request):
+        if (resp := _forbidden(request, READ)) is not None:
+            return resp
+        from .conf import tasks_settings
+        from .presets import get_board_presets
+
+        presets = []
+        for key in sorted(get_board_presets()):
+            from .presets import get_preset_columns
+
+            presets.append(
+                BoardPresetResponse(
+                    key=key,
+                    columns=[
+                        PresetColumnResponse(
+                            key=spec.key,
+                            name=spec.name,
+                            category=spec.category,
+                            name_key=spec.name_key,
+                            wip_limit=spec.wip_limit,
+                        )
+                        for spec in get_preset_columns(key)
+                    ],
+                )
+            )
+        dto = BoardVocabularyResponse(
+            presets=presets,
+            categories=[
+                VocabularyTermResponse(value=value, label=label)
+                for value, label in ColumnCategory.choices
+            ],
+            checklist_states=[
+                VocabularyTermResponse(value=value, label=label)
+                for value, label in ChecklistState.choices
+            ],
+            priority_scale=[
+                PriorityLevelResponse(
+                    value=int(step["value"]), label_key=str(step["label_key"])
+                )
+                for step in (tasks_settings.PRIORITY_SCALE or [])
+            ],
+        )
+        return StapelResponse(self.get_response_serializer_class()(dto))
+
+
+@extend_schema(tags=["Tasks"])
 class BoardListCreateView(SerializerSeamMixin, APIView):
     """List boards in scope, or create one from a preset."""
 
@@ -204,6 +283,11 @@ class BoardListCreateView(SerializerSeamMixin, APIView):
     request_serializer_class = BoardCreateRequestSerializer
     response_serializer_class = BoardResponseSerializer
 
+    @extend_schema(
+        summary="List boards in scope",
+        responses={200: BoardResponseSerializer(many=True)},
+    )
+    @flow_step(CARD_LIFECYCLE, order=1, note="The member picks a board to work on")
     def get(self, request):
         if (resp := _forbidden(request, READ)) is not None:
             return resp
@@ -215,6 +299,13 @@ class BoardListCreateView(SerializerSeamMixin, APIView):
             response_cls([board_to_dto(b) for b in qs], many=True)
         )
 
+    @extend_schema(
+        summary="Create a board from a preset or an explicit column list",
+        request=BoardCreateRequestSerializer,
+        responses={201: BoardResponseSerializer},
+    )
+    @flow_step(BOARD_SETUP, order=2,
+               note="Create the board; 400 on an unknown preset, 503 when tenancy is unresolved")
     def post(self, request):
         if (resp := _forbidden(request, ADMIN)) is not None:
             return resp
@@ -281,6 +372,7 @@ class BoardDetailView(SerializerSeamMixin, APIView):
     request_serializer_class = BoardUpdateRequestSerializer
     response_serializer_class = BoardResponseSerializer
 
+    @extend_schema(summary="Retrieve a board", responses={200: BoardResponseSerializer})
     def get(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -289,6 +381,11 @@ class BoardDetailView(SerializerSeamMixin, APIView):
             return resp
         return StapelResponse(self.get_response_serializer_class()(board_to_dto(board)))
 
+    @extend_schema(
+        summary="Patch a board (name / feature_defs / settings)",
+        request=BoardUpdateRequestSerializer,
+        responses={200: BoardResponseSerializer},
+    )
     def patch(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -314,6 +411,9 @@ class BoardDetailView(SerializerSeamMixin, APIView):
                 return StapelErrorResponse(400, ERR_400_INVALID_FEATURE_DEFS)
         return StapelResponse(self.get_response_serializer_class()(board_to_dto(board)))
 
+    @extend_schema(
+        summary="Archive a board", responses={200: ArchivedResponseSerializer}
+    )
     def delete(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -325,7 +425,7 @@ class BoardDetailView(SerializerSeamMixin, APIView):
 
         board.archived_at = timezone.now()
         board.save(update_fields=["is_archived", "archived_at", "updated_at"])
-        return StapelResponse({"status": "archived"})  # noqa: R006
+        return StapelResponse(ArchivedResponseSerializer(ArchivedResponse()))
 
 
 # ── Column views ─────────────────────────────────────────────────────────
@@ -339,6 +439,10 @@ class ColumnListCreateView(SerializerSeamMixin, APIView):
     request_serializer_class = ColumnCreateRequestSerializer
     response_serializer_class = ColumnResponseSerializer
 
+    @extend_schema(
+        summary="List a board's columns",
+        responses={200: ColumnResponseSerializer(many=True)},
+    )
     def get(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -352,6 +456,13 @@ class ColumnListCreateView(SerializerSeamMixin, APIView):
             )
         )
 
+    @extend_schema(
+        summary="Add a column to a board",
+        request=ColumnCreateRequestSerializer,
+        responses={201: ColumnResponseSerializer},
+    )
+    @flow_step(BOARD_SETUP, order=3,
+               note="Append a column; 409 when the key is already taken on this board")
     def post(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -361,15 +472,18 @@ class ColumnListCreateView(SerializerSeamMixin, APIView):
         ser = self.get_request_serializer_class()(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
-        column = services.add_column(
-            board,
-            key=data.key,
-            name=data.name,
-            category=data.category,
-            order=data.order,
-            name_key=data.name_key,
-            wip_limit=data.wip_limit,
-        )
+        try:
+            column = services.add_column(
+                board,
+                key=data.key,
+                name=data.name,
+                category=data.category,
+                order=data.order,
+                name_key=data.name_key,
+                wip_limit=data.wip_limit,
+            )
+        except services.ColumnExists:
+            return StapelErrorResponse(409, ERR_409_COLUMN_EXISTS)
         return StapelResponse(
             self.get_response_serializer_class()(column_to_dto(column)),
             status=status.HTTP_201_CREATED,
@@ -384,6 +498,12 @@ class ColumnReorderView(SerializerSeamMixin, APIView):
     request_serializer_class = ColumnReorderRequestSerializer
     response_serializer_class = ColumnResponseSerializer
 
+    @extend_schema(
+        summary="Reorder a board's columns",
+        request=ColumnReorderRequestSerializer,
+        responses={200: ColumnResponseSerializer(many=True)},
+    )
+    @flow_step(BOARD_SETUP, order=4, note="Set column order by key (drag the column headers)")
     def post(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -401,18 +521,105 @@ class ColumnReorderView(SerializerSeamMixin, APIView):
         )
 
 
+@extend_schema(tags=["Tasks"])
+class BoardCardsView(SerializerSeamMixin, APIView):
+    """The whole board in one read — cards grouped by column, in board order.
+
+    ``GET boards/{id}/tasks`` is a keyset FEED (``-created_at``), which is
+    the wrong order for a kanban view: a card's place is its fractional
+    ``position`` inside its column. This read answers board-shaped —
+    columns in ``order``, cards grouped by column key and sorted by
+    ``position`` — un-paginated and capped by ``BOARD_CARDS_MAX`` with a
+    ``truncated`` flag, so a client renders a board in one round trip
+    instead of draining pages and re-sorting.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    response_serializer_class = BoardCardsResponseSerializer
+
+    @extend_schema(
+        summary="Read a whole board (cards grouped by column, position order)",
+        parameters=[
+            OpenApiParameter("column", OpenApiTypes.STR, required=False,
+                             description="Restrict to one column key."),
+            OpenApiParameter("category", OpenApiTypes.STR, required=False,
+                             description="Restrict to columns of one category."),
+            OpenApiParameter("assignee_id", OpenApiTypes.STR, required=False,
+                             description="Restrict to cards assigned to this user id."),
+            OpenApiParameter("include_archived", OpenApiTypes.BOOL, required=False,
+                             description="Include archived cards (default false)."),
+        ],
+        responses={200: BoardCardsResponseSerializer},
+    )
+    @flow_step(CARD_LIFECYCLE, order=2,
+               note="Read the whole board: columns plus cards grouped by column key")
+    def get(self, request, board_id):
+        board = _get_board(request, board_id)
+        if board is None:
+            return StapelErrorResponse(404, ERR_404_BOARD_NOT_FOUND)
+        if (resp := _forbidden(request, READ, board)) is not None:
+            return resp
+        include_archived = request.query_params.get("include_archived", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        columns, grouped, truncated = services.board_cards(
+            board,
+            column=request.query_params.get("column"),
+            category=request.query_params.get("category"),
+            assignee_id=request.query_params.get("assignee_id"),
+            include_archived=include_archived,
+        )
+        cards = {
+            key: [task_to_dto(t) for t in tasks] for key, tasks in grouped.items()
+        }
+        dto = BoardCardsResponse(
+            board_id=str(board.id),
+            columns=[column_to_dto(c) for c in columns],
+            cards=cards,
+            count=sum(len(v) for v in cards.values()),
+            truncated=truncated,
+        )
+        return StapelResponse(self.get_response_serializer_class()(dto))
+
+
 # ── Task views ───────────────────────────────────────────────────────────
 
 
 @extend_schema(tags=["Tasks"])
 class TaskListCreateView(SerializerSeamMixin, APIView):
-    """List a board's cards (paginated) or create one."""
+    """List a board's cards (paginated feed) or create one.
+
+    The listing is a keyset FEED ordered ``-created_at``. For the board
+    shape — grouped by column, ordered by ``position`` — read
+    ``GET boards/{id}/cards`` (:class:`BoardCardsView`) instead.
+    """
 
     permission_classes = [permissions.IsAuthenticated]
     request_serializer_class = TaskCreateRequestSerializer
     response_serializer_class = TaskResponseSerializer
     pagination_class = TaskPagination
 
+    @extend_schema(
+        summary="List a board's cards (keyset feed, newest first)",
+        parameters=[
+            OpenApiParameter("column", OpenApiTypes.STR, required=False,
+                             description="Restrict to one column key."),
+            OpenApiParameter("category", OpenApiTypes.STR, required=False,
+                             description="Restrict to columns of one category."),
+            OpenApiParameter("assignee_id", OpenApiTypes.STR, required=False,
+                             description="Restrict to cards assigned to this user id."),
+            OpenApiParameter("anchor", OpenApiTypes.STR, required=False,
+                             description="Keyset anchor from a previous page."),
+            OpenApiParameter("limit", OpenApiTypes.INT, required=False,
+                             description="Page size (default DEFAULT_PAGE_SIZE, max 500)."),
+            OpenApiParameter("direction", OpenApiTypes.STR, required=False,
+                             enum=["next", "prev", "center"],
+                             description="Pagination direction (default next)."),
+        ],
+        responses={200: TaskPageResponseSerializer},
+    )
     def get(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -441,6 +648,12 @@ class TaskListCreateView(SerializerSeamMixin, APIView):
         items = [response_cls(task_to_dto(t)).data for t in page]
         return paginator.get_paginated_response(items)
 
+    @extend_schema(
+        summary="Create a card on a board",
+        request=TaskCreateRequestSerializer,
+        responses={201: TaskResponseSerializer},
+    )
+    @flow_step(CARD_LIFECYCLE, order=3, note="Add a card (the inline composer at a column foot)")
     def post(self, request, board_id):
         board = _get_board(request, board_id)
         if board is None:
@@ -488,6 +701,8 @@ class TaskDetailView(SerializerSeamMixin, APIView):
     request_serializer_class = TaskUpdateRequestSerializer
     response_serializer_class = TaskResponseSerializer
 
+    @extend_schema(summary="Retrieve a card", responses={200: TaskResponseSerializer})
+    @flow_step(CARD_LIFECYCLE, order=4, note="Open the card sheet")
     def get(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -496,6 +711,12 @@ class TaskDetailView(SerializerSeamMixin, APIView):
             return resp
         return StapelResponse(self.get_response_serializer_class()(task_to_dto(task)))
 
+    @extend_schema(
+        summary="Patch a card",
+        request=TaskUpdateRequestSerializer,
+        responses={200: TaskResponseSerializer},
+    )
+    @flow_step(CARD_LIFECYCLE, order=5, note="Edit title/description/priority/due/custom fields")
     def patch(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -519,6 +740,8 @@ class TaskDetailView(SerializerSeamMixin, APIView):
         task = _get_task(request, task_id)
         return StapelResponse(self.get_response_serializer_class()(task_to_dto(task)))
 
+    @extend_schema(summary="Archive a card", responses={200: ArchivedResponseSerializer})
+    @flow_step(CARD_LIFECYCLE, order=12, note="Archive the card (soft delete)")
     def delete(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -526,7 +749,7 @@ class TaskDetailView(SerializerSeamMixin, APIView):
         if (resp := _forbidden(request, WRITE, task.board)) is not None:
             return resp
         services.archive_task(task, actor=request.user)
-        return StapelResponse({"status": "archived"})  # noqa: R006
+        return StapelResponse(ArchivedResponseSerializer(ArchivedResponse()))
 
 
 @extend_schema(tags=["Tasks"])
@@ -537,6 +760,17 @@ class TaskMoveView(SerializerSeamMixin, APIView):
     request_serializer_class = TaskMoveRequestSerializer
     response_serializer_class = MoveResponseSerializer
 
+    @extend_schema(
+        summary="Move a card to another column",
+        request=TaskMoveRequestSerializer,
+        responses={
+            200: MoveResponseSerializer,
+            202: MoveResponseSerializer,
+            409: MoveResponseSerializer,
+        },
+    )
+    @flow_step(CARD_MOVE, order=1,
+               note="200 applied / 202 deferred / 409 denied — the body carries reason_key")
     def post(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -573,6 +807,12 @@ class TaskAssignView(SerializerSeamMixin, APIView):
     request_serializer_class = TaskAssignRequestSerializer
     response_serializer_class = TaskResponseSerializer
 
+    @extend_schema(
+        summary="Replace a card's assignees",
+        request=TaskAssignRequestSerializer,
+        responses={200: TaskResponseSerializer},
+    )
+    @flow_step(CARD_LIFECYCLE, order=6, note="Replace the assignee set (full replace, not a delta)")
     def post(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -599,6 +839,10 @@ class CommentListCreateView(SerializerSeamMixin, APIView):
     request_serializer_class = CommentCreateRequestSerializer
     response_serializer_class = CommentResponseSerializer
 
+    @extend_schema(
+        summary="List a card's comments",
+        responses={200: CommentResponseSerializer(many=True)},
+    )
     def get(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -611,6 +855,12 @@ class CommentListCreateView(SerializerSeamMixin, APIView):
             response_cls([comment_to_dto(c) for c in comments], many=True)
         )
 
+    @extend_schema(
+        summary="Add a comment to a card",
+        request=CommentCreateRequestSerializer,
+        responses={201: CommentResponseSerializer},
+    )
+    @flow_step(CARD_LIFECYCLE, order=7, note="Comment on the card (the human reply channel)")
     def post(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -636,6 +886,10 @@ class ChecklistListCreateView(SerializerSeamMixin, APIView):
     request_serializer_class = ChecklistItemCreateRequestSerializer
     response_serializer_class = ChecklistItemResponseSerializer
 
+    @extend_schema(
+        summary="List a card's checklist",
+        responses={200: ChecklistItemResponseSerializer(many=True)},
+    )
     def get(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -649,6 +903,11 @@ class ChecklistListCreateView(SerializerSeamMixin, APIView):
             )
         )
 
+    @extend_schema(
+        summary="Add a checklist step to a card",
+        request=ChecklistItemCreateRequestSerializer,
+        responses={201: ChecklistItemResponseSerializer},
+    )
     def post(self, request, task_id):
         task = _get_task(request, task_id)
         if task is None:
@@ -675,6 +934,12 @@ class ChecklistItemStateView(SerializerSeamMixin, APIView):
     request_serializer_class = ChecklistItemStateRequestSerializer
     response_serializer_class = ChecklistItemResponseSerializer
 
+    @extend_schema(
+        summary="Set a checklist step's state",
+        request=ChecklistItemStateRequestSerializer,
+        responses={200: ChecklistItemResponseSerializer},
+    )
+    @flow_step(CARD_LIFECYCLE, order=8, note="pending / done / failed — failed is a real state")
     def post(self, request, task_id, item_id):
         task = _get_task(request, task_id)
         if task is None:

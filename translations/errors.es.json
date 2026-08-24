@@ -1,0 +1,17 @@
+{
+  "error.400.tasks_invalid_checklist_state": "El estado del paso debe ser uno de: pending, done, failed",
+  "error.400.tasks_invalid_column": "Columna no válida",
+  "error.400.tasks_invalid_feature_defs": "Esquema de campos personalizados no válido",
+  "error.400.tasks_invalid_features": "Valores de campos personalizados no válidos para este tablero",
+  "error.400.tasks_invalid_move": "Movimiento no válido: columna o posición desconocida",
+  "error.400.tasks_unknown_preset": "Plantilla de tablero desconocida",
+  "error.403.tasks_forbidden": "No tienes permiso para realizar esta acción",
+  "error.404.tasks_board_not_found": "Tablero no encontrado",
+  "error.404.tasks_checklist_item_not_found": "Paso de la lista de comprobación no encontrado",
+  "error.404.tasks_column_not_found": "Columna no encontrada",
+  "error.404.tasks_comment_not_found": "Comentario no encontrado",
+  "error.404.tasks_task_not_found": "Tarjeta no encontrada",
+  "error.409.tasks_column_exists": "Ya existe una columna con esa clave en el tablero",
+  "error.409.tasks_transition_not_allowed": "El flujo de trabajo del tablero no permite este movimiento",
+  "error.503.tasks_scope_unresolved": "No se puede determinar a qué espacio de trabajo pertenece el tablero"
+}

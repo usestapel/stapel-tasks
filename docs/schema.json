@@ -1,0 +1,1942 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "",
+    "version": "0.0.0"
+  },
+  "paths": {
+    "/tasks/api/v1/boards": {
+      "get": {
+        "operationId": "tasks_api_v1_boards_list",
+        "description": "List boards in scope, or create one from a preset.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "List boards in scope",
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BoardResponse"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "operationId": "tasks_api_v1_boards_create",
+        "description": "List boards in scope, or create one from a preset.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Create a board from a preset or an explicit column list",
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/boards/{board_id}": {
+      "get": {
+        "operationId": "tasks_api_v1_boards_retrieve",
+        "description": "Retrieve, patch (name/feature_defs/settings) or archive a board.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Retrieve a board",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "patch": {
+        "operationId": "tasks_api_v1_boards_partial_update",
+        "description": "Retrieve, patch (name/feature_defs/settings) or archive a board.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Patch a board (name / feature_defs / settings)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedBoardUpdateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedBoardUpdateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedBoardUpdateRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "operationId": "tasks_api_v1_boards_destroy",
+        "description": "Retrieve, patch (name/feature_defs/settings) or archive a board.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Archive a board",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchivedResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/boards/{board_id}/cards": {
+      "get": {
+        "operationId": "tasks_api_v1_boards_cards_retrieve",
+        "description": "The whole board in one read — cards grouped by column, in board order.\n\n``GET boards/{id}/tasks`` is a keyset FEED (``-created_at``), which is\nthe wrong order for a kanban view: a card's place is its fractional\n``position`` inside its column. This read answers board-shaped —\ncolumns in ``order``, cards grouped by column key and sorted by\n``position`` — un-paginated and capped by ``BOARD_CARDS_MAX`` with a\n``truncated`` flag, so a client renders a board in one round trip\ninstead of draining pages and re-sorting.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Read a whole board (cards grouped by column, position order)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "assignee_id",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restrict to cards assigned to this user id."
+          },
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restrict to columns of one category."
+          },
+          {
+            "in": "query",
+            "name": "column",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restrict to one column key."
+          },
+          {
+            "in": "query",
+            "name": "include_archived",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Include archived cards (default false)."
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardCardsResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/boards/{board_id}/columns": {
+      "get": {
+        "operationId": "tasks_api_v1_boards_columns_list",
+        "description": "List a board's columns or add one.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "List a board's columns",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ColumnResponse"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "operationId": "tasks_api_v1_boards_columns_create",
+        "description": "List a board's columns or add one.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Add a column to a board",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColumnResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/boards/{board_id}/columns/reorder": {
+      "post": {
+        "operationId": "tasks_api_v1_boards_columns_reorder_create",
+        "description": "Reorder a board's columns by key.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Reorder a board's columns",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnReorderRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnReorderRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnReorderRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ColumnResponse"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/boards/{board_id}/tasks": {
+      "get": {
+        "operationId": "tasks_api_v1_boards_tasks_retrieve",
+        "description": "List a board's cards (paginated feed) or create one.\n\nThe listing is a keyset FEED ordered ``-created_at``. For the board\nshape — grouped by column, ordered by ``position`` — read\n``GET boards/{id}/cards`` (:class:`BoardCardsView`) instead.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "List a board's cards (keyset feed, newest first)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "anchor",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Keyset anchor from a previous page."
+          },
+          {
+            "in": "query",
+            "name": "assignee_id",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restrict to cards assigned to this user id."
+          },
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restrict to columns of one category."
+          },
+          {
+            "in": "query",
+            "name": "column",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restrict to one column key."
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "center",
+                "next",
+                "prev"
+              ]
+            },
+            "description": "Pagination direction (default next)."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page size (default DEFAULT_PAGE_SIZE, max 500)."
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskPageResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "operationId": "tasks_api_v1_boards_tasks_create",
+        "description": "List a board's cards (paginated feed) or create one.\n\nThe listing is a keyset FEED ordered ``-created_at``. For the board\nshape — grouped by column, ordered by ``position`` — read\n``GET boards/{id}/cards`` (:class:`BoardCardsView`) instead.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Create a card on a board",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/boards/presets": {
+      "get": {
+        "operationId": "tasks_api_v1_boards_presets_retrieve",
+        "description": "Serve the vocabularies a board-creation form needs.\n\nPreset keys, the fixed column categories, the checklist states and the\nconfigured priority scale are all facts a client cannot otherwise\ndiscover: presets are an open merge registry (a host adds its own), and\n``priority`` is an unconstrained int in the table.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Board presets and vocabularies",
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardVocabularyResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/tasks/{task_id}": {
+      "get": {
+        "operationId": "tasks_api_v1_tasks_retrieve",
+        "description": "Retrieve, patch or archive a card.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Retrieve a card",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "patch": {
+        "operationId": "tasks_api_v1_tasks_partial_update",
+        "description": "Retrieve, patch or archive a card.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Patch a card",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTaskUpdateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTaskUpdateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedTaskUpdateRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "operationId": "tasks_api_v1_tasks_destroy",
+        "description": "Retrieve, patch or archive a card.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Archive a card",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchivedResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/tasks/{task_id}/assign": {
+      "post": {
+        "operationId": "tasks_api_v1_tasks_assign_create",
+        "description": "Replace a card's assignee set.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Replace a card's assignees",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskAssignRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskAssignRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskAssignRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/tasks/{task_id}/checklist": {
+      "get": {
+        "operationId": "tasks_api_v1_tasks_checklist_list",
+        "description": "List a card's checklist or add a step.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "List a card's checklist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChecklistItemResponse"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "operationId": "tasks_api_v1_tasks_checklist_create",
+        "description": "List a card's checklist or add a step.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Add a checklist step to a card",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistItemCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistItemCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistItemCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistItemResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/tasks/{task_id}/checklist/{item_id}/state": {
+      "post": {
+        "operationId": "tasks_api_v1_tasks_checklist_state_create",
+        "description": "Set a checklist step's state (pending/done/failed).\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Set a checklist step's state",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistItemStateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistItemStateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistItemStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistItemResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/tasks/{task_id}/comments": {
+      "get": {
+        "operationId": "tasks_api_v1_tasks_comments_list",
+        "description": "List a card's comments or add one.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "List a card's comments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommentResponse"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "operationId": "tasks_api_v1_tasks_comments_create",
+        "description": "List a card's comments or add one.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Add a comment to a card",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/tasks/api/v1/tasks/{task_id}/move": {
+      "post": {
+        "operationId": "tasks_api_v1_tasks_move_create",
+        "description": "Move a card (drag-and-drop) subject to MOVE_POLICY.\n\n**Permissions:** `IsAuthenticated`",
+        "summary": "Move a card to another column",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "Tasks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskMoveRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskMoveRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskMoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "JWTCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArchivedResponse": {
+        "type": "object",
+        "description": "Answer to an archive (soft-delete) call.",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Always \"archived\" — the row is kept, not deleted"
+          }
+        }
+      },
+      "BoardCardsResponse": {
+        "type": "object",
+        "description": "A whole board in one read: its columns, and its cards grouped by column.\n\nThe paginated ``GET boards/{id}/tasks`` answers in ``-created_at`` order\n(a feed), but a card's place on a board is its fractional ``position``\nwithin its column. This read is the board-shaped one: every non-archived\ncard, grouped by column key, each group ordered by ``position``, columns\nin board order — the same shape the ``tasks.list_board`` comm Function\nreturns. Un-paginated and capped by ``BOARD_CARDS_MAX``.",
+        "properties": {
+          "board_id": {
+            "type": "string",
+            "description": "The board's id"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnResponse"
+            },
+            "description": "The board's columns in display order"
+          },
+          "cards": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TaskResponse"
+              }
+            },
+            "description": "Card lists keyed by column key; every column key is present"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of cards returned"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when the cap cut the answer short — the client must"
+          }
+        },
+        "required": [
+          "board_id"
+        ]
+      },
+      "BoardCreateRequest": {
+        "type": "object",
+        "description": "Create a board.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Board name"
+          },
+          "preset": {
+            "type": "string",
+            "description": "Board preset key (default \"simple\"); ignored if columns given"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "nullable": true,
+            "description": "Explicit column specs (key/name/category/...) — overrides preset"
+          },
+          "feature_defs": {
+            "type": "array",
+            "items": {},
+            "description": "Custom-field schema"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Optional slug"
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Optional board settings"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "BoardPresetResponse": {
+        "type": "object",
+        "description": "A board-shape preset.",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Preset key to pass as ``preset`` when creating a board"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PresetColumnResponse"
+            },
+            "description": "The columns a board created from it starts with"
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "BoardResponse": {
+        "type": "object",
+        "description": "A board with its columns.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Board id (UUID)"
+          },
+          "workspace_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Opaque tenancy (null if un-scoped)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Board name"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Board slug"
+          },
+          "feature_defs": {
+            "type": "array",
+            "items": {},
+            "description": "Custom-field schema (stapel-attributes FeatureDef list)"
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Board settings (may hold a `transitions` whitelist)"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnResponse"
+            },
+            "description": "The board's columns"
+          },
+          "is_archived": {
+            "type": "boolean",
+            "description": "Soft-delete flag"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Creation time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "workspace_id"
+        ]
+      },
+      "BoardVocabularyResponse": {
+        "type": "object",
+        "description": "Everything a board-creation form needs that is otherwise undiscoverable.\n\nPresets, the fixed column-category vocabulary, the checklist states and\nthe host's configured priority scale (``priority`` itself is an\nunconstrained int in the table — this is the scale a client offers).",
+        "properties": {
+          "presets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardPresetResponse"
+            },
+            "description": "Board-shape presets, ``key`` sorted"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTermResponse"
+            },
+            "description": "The fixed column-category vocabulary"
+          },
+          "checklist_states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTermResponse"
+            },
+            "description": "The fixed checklist-state vocabulary"
+          },
+          "priority_scale": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriorityLevelResponse"
+            },
+            "description": "The configured priority steps (may be empty)"
+          }
+        }
+      },
+      "ChecklistItemCreateRequest": {
+        "type": "object",
+        "description": "Add a checklist step.",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Step text"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Opaque external-step id"
+          },
+          "order": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional order"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "ChecklistItemResponse": {
+        "type": "object",
+        "description": "A checklist step.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Item id (UUID)"
+          },
+          "text": {
+            "type": "string",
+            "description": "Step text"
+          },
+          "state": {
+            "type": "string",
+            "description": "pending/done/failed"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Order within the card's checklist"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Opaque id of an external step this item mirrors"
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "state",
+          "text"
+        ]
+      },
+      "ChecklistItemStateRequest": {
+        "type": "object",
+        "description": "Set a checklist step's state.",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "pending/done/failed"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "ColumnCreateRequest": {
+        "type": "object",
+        "description": "Add a column to a board.",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Stable machine key"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "category": {
+            "type": "string",
+            "description": "backlog/active/review/waiting/done"
+          },
+          "order": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional position (append if omitted)"
+          },
+          "name_key": {
+            "type": "string",
+            "description": "Optional i18n key"
+          },
+          "wip_limit": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional WIP limit"
+          }
+        },
+        "required": [
+          "category",
+          "key",
+          "name"
+        ]
+      },
+      "ColumnReorderRequest": {
+        "type": "object",
+        "description": "Reorder a board's columns.",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Column keys in the desired order"
+          }
+        }
+      },
+      "ColumnResponse": {
+        "type": "object",
+        "description": "A board column.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Column id (UUID)"
+          },
+          "board_id": {
+            "type": "string",
+            "description": "Owning board id"
+          },
+          "key": {
+            "type": "string",
+            "description": "Stable machine key = the card's status"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "name_key": {
+            "type": "string",
+            "description": "Optional i18n key for the display name"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Position of the column on the board"
+          },
+          "category": {
+            "type": "string",
+            "description": "Fixed machine semantic (backlog/active/review/waiting/done)"
+          },
+          "wip_limit": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional WIP limit (stored, not enforced in v1)"
+          }
+        },
+        "required": [
+          "board_id",
+          "category",
+          "id",
+          "key",
+          "name",
+          "name_key",
+          "order"
+        ]
+      },
+      "CommentCreateRequest": {
+        "type": "object",
+        "description": "Add a comment.",
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "Comment text"
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "CommentResponse": {
+        "type": "object",
+        "description": "A comment on a card.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Comment id (UUID)"
+          },
+          "task_id": {
+            "type": "string",
+            "description": "Card id"
+          },
+          "author_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Author's user id (null if anonymized)"
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation time"
+          }
+        },
+        "required": [
+          "author_id",
+          "body",
+          "created_at",
+          "id",
+          "task_id"
+        ]
+      },
+      "MoveResponse": {
+        "type": "object",
+        "description": "Outcome of a move.",
+        "properties": {
+          "result": {
+            "type": "string",
+            "description": "applied/deferred/denied"
+          },
+          "reason_key": {
+            "type": "string",
+            "nullable": true,
+            "description": "Localizable reason key when denied (else null)"
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "PatchedBoardUpdateRequest": {
+        "type": "object",
+        "description": "Patch a board (only provided fields change).",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "New name"
+          },
+          "feature_defs": {
+            "type": "array",
+            "items": {},
+            "nullable": true,
+            "description": "New custom-field schema"
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true,
+            "description": "New settings"
+          }
+        }
+      },
+      "PatchedTaskUpdateRequest": {
+        "type": "object",
+        "description": "Patch a card (only provided fields change).",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "New title"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "New description"
+          },
+          "priority": {
+            "type": "integer",
+            "nullable": true,
+            "description": "New priority"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "New due date"
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true,
+            "description": "New custom-field values DTO"
+          }
+        }
+      },
+      "PresetColumnResponse": {
+        "type": "object",
+        "description": "One column of a board preset.",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Stable machine key the created column will carry"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "category": {
+            "type": "string",
+            "description": "Fixed machine semantic (backlog/active/review/waiting/done)"
+          },
+          "name_key": {
+            "type": "string",
+            "description": "Optional i18n key for the display name"
+          },
+          "wip_limit": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional WIP limit"
+          }
+        },
+        "required": [
+          "category",
+          "key",
+          "name"
+        ]
+      },
+      "PriorityLevelResponse": {
+        "type": "object",
+        "description": "One step of the configured priority scale.",
+        "properties": {
+          "value": {
+            "type": "integer",
+            "description": "The integer written to a card's ``priority``"
+          },
+          "label_key": {
+            "type": "string",
+            "description": "i18n key a client renders for this step"
+          }
+        },
+        "required": [
+          "label_key",
+          "value"
+        ]
+      },
+      "TaskAssignRequest": {
+        "type": "object",
+        "description": "Replace a card's assignee set.",
+        "properties": {
+          "assignee_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The new full set of assignee user ids"
+          }
+        }
+      },
+      "TaskCreateRequest": {
+        "type": "object",
+        "description": "Create a card.",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Card title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description"
+          },
+          "column": {
+            "type": "string",
+            "nullable": true,
+            "description": "Target column key (defaults to the first column)"
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {},
+            "nullable": true,
+            "description": "Custom-field values DTO"
+          },
+          "priority": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional priority"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Optional due date"
+          },
+          "parent_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Parent card id"
+          },
+          "assignee_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Users to assign"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "TaskMoveRequest": {
+        "type": "object",
+        "description": "Move a card (drag-and-drop).",
+        "properties": {
+          "to_column": {
+            "type": "string",
+            "description": "Target column key"
+          },
+          "index": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Target index within the column (append if omitted)"
+          }
+        },
+        "required": [
+          "to_column"
+        ]
+      },
+      "TaskPageResponse": {
+        "type": "object",
+        "description": "One keyset page of the card feed (``GET boards/{id}/tasks``).\n\nThe envelope stapel-core's anchor pagination answers with. Note the\norder is ``-created_at`` — a feed, not the board shape; read\n``BoardCardsResponse`` for the latter.",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskResponse"
+            },
+            "description": "The cards on this page"
+          },
+          "next_anchor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Anchor to pass as ``anchor`` for the next page (null at the end)"
+          },
+          "prev_anchor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Anchor for the previous page (null at the start)"
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether more cards follow this page"
+          },
+          "has_prev": {
+            "type": "boolean",
+            "description": "Whether cards precede this page"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of cards on this page"
+          }
+        }
+      },
+      "TaskResponse": {
+        "type": "object",
+        "description": "A card.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Card id (UUID)"
+          },
+          "board_id": {
+            "type": "string",
+            "description": "Owning board id"
+          },
+          "column": {
+            "type": "string",
+            "description": "The card's column key (= its status)"
+          },
+          "category": {
+            "type": "string",
+            "description": "The card's column category"
+          },
+          "position": {
+            "type": "string",
+            "description": "Fractional position within the column (stringified Decimal)"
+          },
+          "title": {
+            "type": "string",
+            "description": "Card title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Free-text description"
+          },
+          "creator_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Creator's user id (null if anonymized)"
+          },
+          "assignee_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Assigned users"
+          },
+          "priority": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Optional priority"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Optional due date"
+          },
+          "parent_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Parent card id (sub-tasks/epics)"
+          },
+          "blocked_by_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Cards this card is blocked by"
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Custom-field values (DAO with display metadata)"
+          },
+          "origin_type": {
+            "type": "string",
+            "description": "Projection namespace (\"local\" for user-created cards)"
+          },
+          "origin_ref": {
+            "type": "string",
+            "nullable": true,
+            "description": "Opaque id of the projected source (null for local)"
+          },
+          "origin_meta": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Projection metadata (owned by the projecting system)"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Set when the card entered a DONE column"
+          },
+          "is_archived": {
+            "type": "boolean",
+            "description": "Soft-delete flag"
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItemResponse"
+            },
+            "description": "Checklist steps"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Creation time"
+          }
+        },
+        "required": [
+          "board_id",
+          "category",
+          "column",
+          "creator_id",
+          "description",
+          "id",
+          "position",
+          "title"
+        ]
+      },
+      "VocabularyTermResponse": {
+        "type": "object",
+        "description": "One term of a fixed vocabulary.",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "The machine value carried in requests and responses"
+          },
+          "label": {
+            "type": "string",
+            "description": "The canonical English label (a client localizes by value)"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "JWTCookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "stapel_jwt",
+        "description": "JWT token stored in cookie. Login via /auth/admin/ to get the cookie."
+      }
+    }
+  }
+}

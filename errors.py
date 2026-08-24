@@ -17,6 +17,7 @@ ERR_404_COLUMN_NOT_FOUND = "error.404.tasks_column_not_found"
 ERR_404_TASK_NOT_FOUND = "error.404.tasks_task_not_found"
 ERR_404_COMMENT_NOT_FOUND = "error.404.tasks_comment_not_found"
 ERR_404_CHECKLIST_ITEM_NOT_FOUND = "error.404.tasks_checklist_item_not_found"
+ERR_409_COLUMN_EXISTS = "error.409.tasks_column_exists"
 ERR_409_TRANSITION_NOT_ALLOWED = "error.409.tasks_transition_not_allowed"
 ERR_503_SCOPE_UNRESOLVED = "error.503.tasks_scope_unresolved"
 
@@ -33,6 +34,7 @@ STAPEL_TASKS_ERRORS = {
     ERR_404_TASK_NOT_FOUND: "Task not found",
     ERR_404_COMMENT_NOT_FOUND: "Comment not found",
     ERR_404_CHECKLIST_ITEM_NOT_FOUND: "Checklist item not found",
+    ERR_409_COLUMN_EXISTS: "A column with this key already exists on the board",
     ERR_409_TRANSITION_NOT_ALLOWED: "This move is not allowed by the board workflow",
     ERR_503_SCOPE_UNRESOLVED: "Cannot determine which workspace this board belongs to",
 }
@@ -53,6 +55,7 @@ __all__ = [
     "ERR_404_TASK_NOT_FOUND",
     "ERR_404_COMMENT_NOT_FOUND",
     "ERR_404_CHECKLIST_ITEM_NOT_FOUND",
+    "ERR_409_COLUMN_EXISTS",
     "ERR_409_TRANSITION_NOT_ALLOWED",
     "ERR_503_SCOPE_UNRESOLVED",
 ]

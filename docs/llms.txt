@@ -1,8 +1,8 @@
-# stapel-tasks 0.2.0
+# stapel-tasks 0.3.0
 
 Generic tasks and kanban boards: Board/Column/Task/ChecklistItem/TaskComment, a REST surface, a full outbox event surface, and custom fields via stapel-attributes. Usable standalone (a team runs a board by hand) or as the substrate an external orchestrator projects onto through opaque origin_* handles, a MOVE_POLICY authorization seam, and comm Functions (tasks.get/list_board/create/move/comment).
 
-Contract: axes 3 · surface 27 · extension points 5.
+Contract: axes 3 · surface 28 · extension points 5 · operations 22 · error codes 57 · flows 3.
 Generated from docs/capabilities.json by `stapel-llms-txt` — do not edit; drift-gated by `make contract-check`.
 
 ## Configuration axes — what a product switches on
@@ -28,6 +28,8 @@ This is the answer to "does Stapel already have something for X?". `instead of` 
 - archive_task — stapel_tasks.services.archive_task
   instead of: Task.delete()
   Soft-delete a card (is_archived + archived_at) and emit task.archived, idempotently. Use this instead of task.delete() — every positioning helper (create_task/move_task) already filters is_archived=False, so a hard-deleted-outside-this-call card breaks referential integrity for comments/checklist items that still point at it, where an archived one does not.
+- board_cards — stapel_tasks.services.board_cards
+  Read a whole board in one query: columns in display order plus every non-archived card grouped by column key and sorted by position, capped and flagged when the cap cut the answer short. Reach for this instead of paginating boards/{id}/tasks and re-sorting client-side — that listing is a -created_at feed, and this is the order a card actually sits in.
 - create_board — stapel_tasks.services.create_board
   Create a board with its starting columns (an explicit list or a named preset) and a validated custom-field schema in one call. Reach for this instead of creating a Board row and its Columns by hand — feature_defs is validated through the attributes seam before anything is written, and an unknown preset raises KeyError up front rather than leaving a columnless board.
 - create_task — stapel_tasks.services.create_task
@@ -98,3 +100,94 @@ This is the answer to "does Stapel already have something for X?". `instead of` 
 ## Fits with — fleet dependencies
 - stapel-attributes (optional) — soft integration for typed custom-field validation on cards; module runs without it (feature seam degrades to a pass-through governed by STORE_UNKNOWN_FEATURES) (pyproject.toml optional-dependencies 'attributes' extra)
 - stapel-core (required) — comm bus (task.* emits, tasks.* Functions, user.deleted consume for GDPR anonymization) (pyproject.toml dependency)
+
+## HTTP operations (22) — call by operationId, never by a typed path
+Paths are relative to `/tasks/api/v1/`.
+### Tasks
+- GET /boards/{board_id}/cards — tasks_api_v1_boards_cards_retrieve
+- POST /boards/{board_id}/columns — tasks_api_v1_boards_columns_create
+- GET /boards/{board_id}/columns — tasks_api_v1_boards_columns_list
+- POST /boards/{board_id}/columns/reorder — tasks_api_v1_boards_columns_reorder_create
+- POST /boards — tasks_api_v1_boards_create
+- DELETE /boards/{board_id} — tasks_api_v1_boards_destroy
+- GET /boards — tasks_api_v1_boards_list
+- PATCH /boards/{board_id} — tasks_api_v1_boards_partial_update
+- GET /boards/presets — tasks_api_v1_boards_presets_retrieve
+- GET /boards/{board_id} — tasks_api_v1_boards_retrieve
+- POST /boards/{board_id}/tasks — tasks_api_v1_boards_tasks_create
+- GET /boards/{board_id}/tasks — tasks_api_v1_boards_tasks_retrieve
+- POST /tasks/{task_id}/assign — tasks_api_v1_tasks_assign_create
+- POST /tasks/{task_id}/checklist — tasks_api_v1_tasks_checklist_create
+- GET /tasks/{task_id}/checklist — tasks_api_v1_tasks_checklist_list
+- POST /tasks/{task_id}/checklist/{item_id}/state — tasks_api_v1_tasks_checklist_state_create
+- POST /tasks/{task_id}/comments — tasks_api_v1_tasks_comments_create
+- GET /tasks/{task_id}/comments — tasks_api_v1_tasks_comments_list
+- DELETE /tasks/{task_id} — tasks_api_v1_tasks_destroy
+- POST /tasks/{task_id}/move — tasks_api_v1_tasks_move_create
+- PATCH /tasks/{task_id} — tasks_api_v1_tasks_partial_update
+- GET /tasks/{task_id} — tasks_api_v1_tasks_retrieve
+
+## Error codes (57) — the StapelError envelope
+Render `t(code, params)`; branch UX on the remediation. Localized text lives in docs/errors.<lang>.md, not here.
+- error.400.bad_request [400] fix_input
+- error.400.captcha_invalid [400] retry
+- error.400.captcha_required [400] retry
+- error.400.expected_list [400] fix_input
+- error.400.field.blank [400] fix_input {field}
+- error.400.field.does_not_exist [400] fix_input {field}
+- error.400.field.invalid [400] fix_input {field}
+- error.400.field.invalid_choice [400] fix_input {field}
+- error.400.field.max_length [400] fix_input {field,max_length}
+- error.400.field.max_value [400] fix_input {field,max_value}
+- error.400.field.min_length [400] fix_input {field,min_length}
+- error.400.field.min_value [400] fix_input {field,min_value}
+- error.400.field.null [400] fix_input {field}
+- error.400.field.required [400] fix_input {field}
+- error.400.field.unique [400] fix_input {field}
+- error.400.invalid_ad_id [400] fix_input
+- error.400.tasks_invalid_checklist_state [400] fix_input
+- error.400.tasks_invalid_column [400] fix_input
+- error.400.tasks_invalid_feature_defs [400] fix_input
+- error.400.tasks_invalid_features [400] fix_input
+- error.400.tasks_invalid_move [400] fix_input
+- error.400.tasks_unknown_preset [400] fix_input
+- error.400.validation_error [400] fix_input
+- error.400.verification_failed [400] verify
+- error.400.verification_invalid_factor [400] verify
+- error.401.unauthorized [401] reauthenticate
+- error.402.payment_required [402] retry
+- error.403.forbidden [403] retry
+- error.403.network_blocked [403] contact_support
+- error.403.tasks_forbidden [403] retry
+- error.403.verification_enrollment_required [403] verify
+- error.403.verification_required [403] verify
+- error.404.ad_not_found [404] retry
+- error.404.not_found [404] retry
+- error.404.tasks_board_not_found [404] retry
+- error.404.tasks_checklist_item_not_found [404] retry
+- error.404.tasks_column_not_found [404] retry
+- error.404.tasks_comment_not_found [404] retry
+- error.404.tasks_task_not_found [404] retry
+- error.404.verification_challenge_not_found [404] verify
+- error.405.method_not_allowed [405] retry
+- error.406.not_acceptable [406] retry
+- error.408.request_timeout [408] retry
+- error.409.conflict [409] fix_input
+- error.409.tasks_column_exists [409] fix_input
+- error.409.tasks_transition_not_allowed [409] fix_input
+- error.410.gone [410] retry
+- error.413.payload_too_large [413] retry
+- error.415.unsupported_media_type [415] retry
+- error.422.unprocessable_entity [422] wait_and_retry
+- error.423.locked [423] wait_and_retry
+- error.423.verification_locked [423] wait_and_retry
+- error.429.rate_limit [429] wait_and_retry {retry_after_minutes}
+- error.429.too_many_requests [429] wait_and_retry
+- error.500.internal [500] contact_support
+- error.503.mandate_unavailable [503] retry
+- error.503.tasks_scope_unresolved [503] retry
+
+## Documented flows (3) — full steps in docs/flows.json
+- tasks.board_setup — Set up a board
+- tasks.card_lifecycle — Work a card from creation to archive
+- tasks.card_move — Move a card across the board

@@ -149,6 +149,148 @@ class BoardResponse:
 
 
 @dataclass
+class TaskPageResponse:
+    """One keyset page of the card feed (``GET boards/{id}/tasks``).
+
+    The envelope stapel-core's anchor pagination answers with. Note the
+    order is ``-created_at`` — a feed, not the board shape; read
+    ``BoardCardsResponse`` for the latter.
+
+    Attributes:
+        items: The cards on this page.
+        next_anchor: Anchor to pass as ``anchor`` for the next page (null at the end).
+        prev_anchor: Anchor for the previous page (null at the start).
+        has_next: Whether more cards follow this page.
+        has_prev: Whether cards precede this page.
+        count: Number of cards on this page.
+    """
+
+    items: List[TaskResponse] = field(default_factory=list)
+    next_anchor: Optional[str] = None
+    prev_anchor: Optional[str] = None
+    has_next: bool = False
+    has_prev: bool = False
+    count: int = 0
+
+
+@dataclass
+class ArchivedResponse:
+    """Answer to an archive (soft-delete) call.
+
+    Attributes:
+        status: Always "archived" — the row is kept, not deleted.
+    """
+
+    status: str = "archived"
+
+
+@dataclass
+class BoardCardsResponse:
+    """A whole board in one read: its columns, and its cards grouped by column.
+
+    The paginated ``GET boards/{id}/tasks`` answers in ``-created_at`` order
+    (a feed), but a card's place on a board is its fractional ``position``
+    within its column. This read is the board-shaped one: every non-archived
+    card, grouped by column key, each group ordered by ``position``, columns
+    in board order — the same shape the ``tasks.list_board`` comm Function
+    returns. Un-paginated and capped by ``BOARD_CARDS_MAX``.
+
+    Attributes:
+        board_id: The board's id.
+        columns: The board's columns in display order.
+        cards: Card lists keyed by column key; every column key is present.
+        count: Number of cards returned.
+        truncated: True when the cap cut the answer short — the client must
+            narrow with filters to see the rest.
+    """
+
+    board_id: str
+    columns: List[ColumnResponse] = field(default_factory=list)
+    cards: Dict[str, List[TaskResponse]] = field(default_factory=dict)
+    count: int = 0
+    truncated: bool = False
+
+
+@dataclass
+class PresetColumnResponse:
+    """One column of a board preset.
+
+    Attributes:
+        key: Stable machine key the created column will carry.
+        name: Display name.
+        category: Fixed machine semantic (backlog/active/review/waiting/done).
+        name_key: Optional i18n key for the display name.
+        wip_limit: Optional WIP limit.
+    """
+
+    key: str
+    name: str
+    category: str
+    name_key: str = ""
+    wip_limit: Optional[int] = None
+
+
+@dataclass
+class BoardPresetResponse:
+    """A board-shape preset.
+
+    Attributes:
+        key: Preset key to pass as ``preset`` when creating a board.
+        columns: The columns a board created from it starts with.
+    """
+
+    key: str
+    columns: List[PresetColumnResponse] = field(default_factory=list)
+
+
+@dataclass
+class VocabularyTermResponse:
+    """One term of a fixed vocabulary.
+
+    Attributes:
+        value: The machine value carried in requests and responses.
+        label: The canonical English label (a client localizes by value).
+    """
+
+    value: str
+    label: str
+
+
+@dataclass
+class PriorityLevelResponse:
+    """One step of the configured priority scale.
+
+    Attributes:
+        value: The integer written to a card's ``priority``.
+        label_key: i18n key a client renders for this step.
+    """
+
+    value: int
+    label_key: str
+
+
+@dataclass
+class BoardVocabularyResponse:
+    """Everything a board-creation form needs that is otherwise undiscoverable.
+
+    Presets, the fixed column-category vocabulary, the checklist states and
+    the host's configured priority scale (``priority`` itself is an
+    unconstrained int in the table — this is the scale a client offers).
+
+    Attributes:
+        presets: Board-shape presets, ``key`` sorted.
+        categories: The fixed column-category vocabulary.
+        checklist_states: The fixed checklist-state vocabulary.
+        priority_scale: The configured priority steps (may be empty).
+    """
+
+    presets: List[BoardPresetResponse] = field(default_factory=list)
+    categories: List[VocabularyTermResponse] = field(default_factory=list)
+    checklist_states: List[VocabularyTermResponse] = field(default_factory=list)
+    priority_scale: List[PriorityLevelResponse] = field(default_factory=list)
+
+
+@dataclass
 class MoveResponse:
     """Outcome of a move.
 

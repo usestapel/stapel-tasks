@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from stapel_core.comm import mutate_and_emit
 
@@ -36,6 +36,15 @@ from .positioning import (
     rebalanced_positions,
 )
 from .presets import ColumnSpec, get_preset_columns
+
+
+class ColumnExists(Exception):
+    """A column with that key already exists on the board.
+
+    The uniqueness of ``(board, key)`` is a database constraint, so the
+    conflict used to surface as an IntegrityError — a 500 for what is
+    ordinary user input. Raised by :func:`add_column`; the view answers 409.
+    """
 
 
 # ── Boards & columns ────────────────────────────────────────────────────
@@ -99,18 +108,29 @@ def add_column(
     name_key: str = "",
     wip_limit: int | None = None,
 ) -> Column:
-    """Append (or insert at ``order``) a column on a board."""
+    """Append (or insert at ``order``) a column on a board.
+
+    Raises :class:`ColumnExists` when ``key`` is already taken on this board
+    — the ``(board, key)`` uniqueness is a constraint, and a caller reusing a
+    key is making an ordinary input mistake, not hitting a server fault.
+    """
     if order is None:
         order = board.columns.count()
-    return Column.objects.create(
-        board=board,
-        key=key,
-        name=name,
-        name_key=name_key,
-        category=category,
-        order=order,
-        wip_limit=wip_limit,
-    )
+    try:
+        # Savepoint: an IntegrityError poisons the surrounding transaction,
+        # so a caller inside atomic() could not continue after the catch.
+        with transaction.atomic():
+            return Column.objects.create(
+                board=board,
+                key=key,
+                name=name,
+                name_key=name_key,
+                category=category,
+                order=order,
+                wip_limit=wip_limit,
+            )
+    except IntegrityError as exc:
+        raise ColumnExists(key) from exc
 
 
 def reorder_columns(board: Board, ordered_keys: list[str]) -> None:
@@ -135,6 +155,59 @@ def set_board_feature_defs(board: Board, feature_defs: list) -> Board:
     board.feature_defs = feature_defs or []
     board.save(update_fields=["feature_defs", "updated_at"])
     return board
+
+
+def board_cards(
+    board: Board,
+    *,
+    column: str | None = None,
+    category: str | None = None,
+    assignee_id=None,
+    origin_ref: str | None = None,
+    include_archived: bool = False,
+    limit: int | None = None,
+) -> tuple[list[Column], dict[str, list[Task]], bool]:
+    """The board-shaped read: columns in order, cards grouped by column key.
+
+    A card's place on a board is ``position`` within its column, so this is
+    what a kanban view needs — not the ``-created_at`` feed the paginated
+    listing answers with. Every column key is present in the mapping (an
+    empty column is an empty list, not a missing key).
+
+    ``limit`` caps the total number of cards; ``None`` means
+    ``BOARD_CARDS_MAX``. Returns ``(columns, cards_by_key, truncated)``.
+    """
+    from .conf import tasks_settings
+
+    if limit is None:
+        limit = tasks_settings.BOARD_CARDS_MAX
+    columns = list(board.columns.order_by("order"))
+    qs = (
+        Task.objects.select_related("column")
+        .prefetch_related("assignees", "blocked_by", "checklist_items")
+        .filter(board=board)
+        .order_by("column__order", "position", "created_at", "id")
+    )
+    if not include_archived:
+        qs = qs.filter(is_archived=False)
+    if column:
+        qs = qs.filter(column__key=column)
+    if category:
+        qs = qs.filter(column__category=category)
+    if assignee_id:
+        qs = qs.filter(assignees__pk=assignee_id)
+    if origin_ref:
+        qs = qs.filter(origin_ref=origin_ref)
+    # One row over the cap distinguishes "exactly at the cap" from "cut".
+    rows = list(qs.distinct()[: limit + 1])
+    truncated = len(rows) > limit
+    if truncated:
+        rows = rows[:limit]
+
+    grouped: dict[str, list[Task]] = {c.key: [] for c in columns}
+    for task in rows:
+        grouped.setdefault(task.column.key, []).append(task)
+    return columns, grouped, truncated
 
 
 # ── Card creation ───────────────────────────────────────────────────────

@@ -27,6 +27,10 @@
       "kind": "gate_function",
       "intent": "Replace a board's custom-field schema, validated via the attributes seam before the write reaches Board.feature_defs. Use this instead of assigning the field directly and saving — a structurally broken schema must never reach existing cards unvalidated."
     },
+    "board_cards": {
+      "kind": "gate_function",
+      "intent": "Read a whole board in one query: columns in display order plus every non-archived card grouped by column key and sorted by position, capped and flagged when the cap cut the answer short. Reach for this instead of paginating boards/{id}/tasks and re-sorting client-side — that listing is a -created_at feed, and this is the order a card actually sits in."
+    },
     "create_task": {
       "kind": "gate_function",
       "intent": "Create a card: validates/normalizes custom-field values, appends it to the end of its column with a fresh fractional position, and emits task.created (plus task.completed if it lands straight in a DONE column) in one mutate_and_emit() unit. This is the creation path — Task.objects.create() skips validation, positioning and the event entirely.",

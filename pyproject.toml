@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stapel-tasks"
-version = "0.2.0"
+version = "0.3.0"
 description = "Generic tasks and kanban boards for the Stapel framework"
 readme = "README.md"
 license = { text = "MIT" }
@@ -56,7 +56,7 @@ package-dir = {"stapel_tasks" = "."}
 packages = ["stapel_tasks", "stapel_tasks.migrations"]
 
 [tool.setuptools.package-data]
-stapel_tasks = ["py.typed", "migrations/*.py", "schemas/**/*.json", "docs/capabilities.json", "docs/flows.json", "docs/errors.json", "docs/llms.txt", "CONFIG.MD"]
+stapel_tasks = ["py.typed", "migrations/*.py", "schemas/**/*.json", "docs/capabilities.json", "docs/schema.json", "docs/flows.json", "docs/errors.json", "docs/llms.txt", "translations/*.json", "CONFIG.MD"]
 
 [tool.pytest.ini_options]
 django_find_project = false

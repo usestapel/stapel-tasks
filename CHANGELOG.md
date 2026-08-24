@@ -4,6 +4,65 @@ All notable changes to stapel-tasks are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0 semver: **minor = breaking**, patch = compatible.
 
+## [0.3.0] — 2026-08-24
+
+### The module emits its own contract triad
+
+`@stapel/tasks-react` could not be generated: this repo shipped no
+`docs/schema.json`, `docs/flows.json` or `docs/errors.json`, and tasks is not
+in the monolith's unified schema either — so the frontend pair would have had
+to hand-write its types from `dto.py` and pin them by hope. `make contract`
+now emits all three from a single-module `{tasks + core}` Django instance
+mounted at the canonical `/tasks/api/v1/` prefix, the geo/moderation recipe.
+
+- `_codegen.py` / `_codegen_settings.py` / `codegen_urls.py` + `make contract`
+  / `make contract-check`; `tests/test_contract.py` gates the triad byte-for-byte,
+  so a serializer that changed without its docs is a red test here rather than
+  a surprise in generated TypeScript.
+- Every APIView method now declares `request=` / `responses=`. It had none, and
+  drf-spectacular's graceful fallback meant an emitted schema described 13
+  endpoints with **no bodies at all** — a generated client of untyped blobs.
+  Two response DTOs existed only as ad-hoc dicts and now have names:
+  `TaskPageResponse` (the keyset envelope) and `ArchivedResponse`.
+- `translations/errors.{ru,es}.json` — owning error keys means shipping their
+  catalogues; without them a translated deployment renders English.
+- `flows.py`: three flows (`tasks.board_setup`, `tasks.card_lifecycle`,
+  `tasks.card_move`) with `@flow_step` on the endpoints they run through.
+
+### `GET boards/{board_id}/cards` — the board shape, not a feed
+
+The paginated `boards/{id}/tasks` answers in `-created_at` order while a card's
+place on a board is its fractional `position` inside its column. Every kanban
+client would have had to drain pages and re-sort — with no whole-board read to
+drain *toward*. The new endpoint answers board-shaped: columns in `order`,
+cards grouped by column key and sorted by `position`, un-paginated, capped by
+`STAPEL_TASKS["BOARD_CARDS_MAX"]` (default 2000) with a `truncated` flag.
+
+- `services.board_cards()` is the single implementation; `tasks.list_board`
+  (comm) was rewritten to call it, so the two transports cannot answer the same
+  board in different orders.
+- Filters: `column`, `category`, `assignee_id`, `include_archived`.
+
+### Duplicate column key: 409, not 500
+
+`POST boards/{id}/columns` with a key the board already has hit the
+`(board, key)` unique constraint and surfaced as a **500** — a server fault
+reported for ordinary user input. `services.add_column` now raises
+`ColumnExists` (inside a savepoint, so a caller in `atomic()` survives the
+catch) and the view answers `409 error.409.tasks_column_exists`.
+
+### `GET boards/presets` — the undiscoverable vocabularies
+
+Preset keys were a registry a host merges into at runtime, with no way for a
+client to ask what is in it; `priority` is an unconstrained int with no scale;
+the column categories and checklist states lived only in the enum. All four are
+now served: `presets[{key, columns[]}]`, `categories[]`, `checklist_states[]`
+and the configurable `PRIORITY_SCALE`.
+
+**Minor, not patch** (pre-1.0: minor = breaking): the API grew two endpoints
+and a new error key. Nothing existing changed shape — the two archive endpoints
+answer the same `{"status": "archived"}` they always did, now under a name.
+
 ## [0.2.0] — 2026-08-16
 
 ### Security — the tenancy seam has a third answer

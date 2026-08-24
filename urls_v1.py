@@ -8,8 +8,10 @@ No global prefix here — the root ``urls.py`` mounts this module under
 from django.urls import path
 
 from .views import (
+    BoardCardsView,
     BoardDetailView,
     BoardListCreateView,
+    BoardVocabularyView,
     ChecklistItemStateView,
     ChecklistListCreateView,
     ColumnListCreateView,
@@ -23,6 +25,13 @@ from .views import (
 
 urlpatterns = [
     path("boards", BoardListCreateView.as_view(), name="tasks-boards"),
+    # Before the <uuid:board_id> detail route for readability; the uuid
+    # converter would not match "presets" anyway.
+    path(
+        "boards/presets",
+        BoardVocabularyView.as_view(),
+        name="tasks-board-presets",
+    ),
     path(
         "boards/<uuid:board_id>",
         BoardDetailView.as_view(),
@@ -37,6 +46,11 @@ urlpatterns = [
         "boards/<uuid:board_id>/columns/reorder",
         ColumnReorderView.as_view(),
         name="tasks-columns-reorder",
+    ),
+    path(
+        "boards/<uuid:board_id>/cards",
+        BoardCardsView.as_view(),
+        name="tasks-board-cards",
     ),
     path(
         "boards/<uuid:board_id>/tasks",

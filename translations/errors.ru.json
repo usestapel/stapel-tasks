@@ -1,0 +1,17 @@
+{
+  "error.400.tasks_invalid_checklist_state": "Состояние пункта чек-листа должно быть одним из: pending, done, failed",
+  "error.400.tasks_invalid_column": "Неверная колонка",
+  "error.400.tasks_invalid_feature_defs": "Неверная схема дополнительных полей",
+  "error.400.tasks_invalid_features": "Неверные значения дополнительных полей для этой доски",
+  "error.400.tasks_invalid_move": "Неверное перемещение: неизвестная колонка или позиция",
+  "error.400.tasks_unknown_preset": "Неизвестный шаблон доски",
+  "error.403.tasks_forbidden": "У вас нет прав на это действие",
+  "error.404.tasks_board_not_found": "Доска не найдена",
+  "error.404.tasks_checklist_item_not_found": "Пункт чек-листа не найден",
+  "error.404.tasks_column_not_found": "Колонка не найдена",
+  "error.404.tasks_comment_not_found": "Комментарий не найден",
+  "error.404.tasks_task_not_found": "Карточка не найдена",
+  "error.409.tasks_column_exists": "Колонка с таким ключом на доске уже есть",
+  "error.409.tasks_transition_not_allowed": "Такое перемещение не разрешено рабочим процессом доски",
+  "error.503.tasks_scope_unresolved": "Не удалось определить, какому пространству принадлежит доска"
+}

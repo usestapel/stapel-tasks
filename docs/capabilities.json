@@ -1,6 +1,6 @@
 {
   "module": "stapel-tasks",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "provides": "Generic tasks and kanban boards: Board/Column/Task/ChecklistItem/TaskComment, a REST surface, a full outbox event surface, and custom fields via stapel-attributes. Usable standalone (a team runs a board by hand) or as the substrate an external orchestrator projects onto through opaque origin_* handles, a MOVE_POLICY authorization seam, and comm Functions (tasks.get/list_board/create/move/comment).",
   "axes": [
     {
@@ -194,6 +194,12 @@
       "instead_of": [
         "Task.delete()"
       ]
+    },
+    {
+      "name": "board_cards",
+      "kind": "gate_function",
+      "path": "stapel_tasks.services.board_cards",
+      "intent": "Read a whole board in one query: columns in display order plus every non-archived card grouped by column key and sorted by position, capped and flagged when the cap cut the answer short. Reach for this instead of paginating boards/{id}/tasks and re-sorting client-side — that listing is a -created_at feed, and this is the order a card actually sits in."
     },
     {
       "name": "create_board",

@@ -1,0 +1,263 @@
+[
+  {
+    "id": "tasks.board_setup",
+    "title": "Set up a board",
+    "title_key": "flow.tasks.board_setup.title",
+    "description": "An admin of a workspace creates a board — from a named preset or from an explicit column list — and then shapes its columns: adds one, reorders them. Columns are workflow-as-data (key = the card's status, category = the fixed machine semantic), so this is the whole configuration surface of a board.",
+    "description_key": "flow.tasks.board_setup.description",
+    "actors": [
+      "Workspace admin"
+    ],
+    "steps": [
+      {
+        "kind": "human",
+        "order": 0,
+        "note": "The admin opens the boards pane and asks for a new board",
+        "note_key": "flow.tasks.board_setup.step.0.note",
+        "ref": ""
+      },
+      {
+        "kind": "http",
+        "order": 1,
+        "note": "The form discovers presets, categories and the priority scale",
+        "note_key": "flow.tasks.board_setup.step.1.note",
+        "ref": "stapel_tasks.views.BoardVocabularyView.get",
+        "endpoints": [
+          {
+            "method": "GET",
+            "path": "/tasks/api/v1/boards/presets"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 2,
+        "note": "Create the board; 400 on an unknown preset, 503 when tenancy is unresolved",
+        "note_key": "flow.tasks.board_setup.step.2.note",
+        "ref": "stapel_tasks.views.BoardListCreateView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/boards"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 3,
+        "note": "Append a column; 409 when the key is already taken on this board",
+        "note_key": "flow.tasks.board_setup.step.3.note",
+        "ref": "stapel_tasks.views.ColumnListCreateView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/boards/<uuid:board_id>/columns"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 4,
+        "note": "Set column order by key (drag the column headers)",
+        "note_key": "flow.tasks.board_setup.step.4.note",
+        "ref": "stapel_tasks.views.ColumnReorderView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/boards/<uuid:board_id>/columns/reorder"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "tasks.card_lifecycle",
+    "title": "Work a card from creation to archive",
+    "title_key": "flow.tasks.card_lifecycle.title",
+    "description": "A member reads the board, adds a card, opens it, edits its fields, assigns it, discusses it in comments, ticks its checklist off and finally archives it. Entering a DONE-category column is what completes a card — the module emits task.completed there, never on an explicit 'close' action.",
+    "description_key": "flow.tasks.card_lifecycle.description",
+    "actors": [
+      "Workspace member"
+    ],
+    "steps": [
+      {
+        "kind": "http",
+        "order": 1,
+        "note": "The member picks a board to work on",
+        "note_key": "flow.tasks.card_lifecycle.step.1.note",
+        "ref": "stapel_tasks.views.BoardListCreateView.get",
+        "endpoints": [
+          {
+            "method": "GET",
+            "path": "/tasks/api/v1/boards"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 2,
+        "note": "Read the whole board: columns plus cards grouped by column key",
+        "note_key": "flow.tasks.card_lifecycle.step.2.note",
+        "ref": "stapel_tasks.views.BoardCardsView.get",
+        "endpoints": [
+          {
+            "method": "GET",
+            "path": "/tasks/api/v1/boards/<uuid:board_id>/cards"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 3,
+        "note": "Add a card (the inline composer at a column foot)",
+        "note_key": "flow.tasks.card_lifecycle.step.3.note",
+        "ref": "stapel_tasks.views.TaskListCreateView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/boards/<uuid:board_id>/tasks"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 4,
+        "note": "Open the card sheet",
+        "note_key": "flow.tasks.card_lifecycle.step.4.note",
+        "ref": "stapel_tasks.views.TaskDetailView.get",
+        "endpoints": [
+          {
+            "method": "GET",
+            "path": "/tasks/api/v1/tasks/<uuid:task_id>"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 5,
+        "note": "Edit title/description/priority/due/custom fields",
+        "note_key": "flow.tasks.card_lifecycle.step.5.note",
+        "ref": "stapel_tasks.views.TaskDetailView.patch",
+        "endpoints": [
+          {
+            "method": "PATCH",
+            "path": "/tasks/api/v1/tasks/<uuid:task_id>"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 6,
+        "note": "Replace the assignee set (full replace, not a delta)",
+        "note_key": "flow.tasks.card_lifecycle.step.6.note",
+        "ref": "stapel_tasks.views.TaskAssignView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/tasks/<uuid:task_id>/assign"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 7,
+        "note": "Comment on the card (the human reply channel)",
+        "note_key": "flow.tasks.card_lifecycle.step.7.note",
+        "ref": "stapel_tasks.views.CommentListCreateView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/tasks/<uuid:task_id>/comments"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 8,
+        "note": "pending / done / failed — failed is a real state",
+        "note_key": "flow.tasks.card_lifecycle.step.8.note",
+        "ref": "stapel_tasks.views.ChecklistItemStateView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/tasks/<uuid:task_id>/checklist/<uuid:item_id>/state"
+          }
+        ]
+      },
+      {
+        "kind": "http",
+        "order": 12,
+        "note": "Archive the card (soft delete)",
+        "note_key": "flow.tasks.card_lifecycle.step.12.note",
+        "ref": "stapel_tasks.views.TaskDetailView.delete",
+        "endpoints": [
+          {
+            "method": "DELETE",
+            "path": "/tasks/api/v1/tasks/<uuid:task_id>"
+          }
+        ]
+      },
+      {
+        "kind": "action",
+        "order": 20,
+        "note": "Emitted when a card is created (projectors subscribe)",
+        "note_key": "flow.tasks.card_lifecycle.step.20.note",
+        "ref": "task.created"
+      },
+      {
+        "kind": "action",
+        "order": 21,
+        "note": "Emitted when a card enters a DONE-category column",
+        "note_key": "flow.tasks.card_lifecycle.step.21.note",
+        "ref": "task.completed"
+      }
+    ]
+  },
+  {
+    "id": "tasks.card_move",
+    "title": "Move a card across the board",
+    "title_key": "flow.tasks.card_move.title",
+    "description": "A member drags a card to another column. The MOVE_POLICY seam has three answers, and the HTTP status carries which one: 200 applied, 202 deferred (an external orchestrator owns the card and will move it), 409 denied with a localizable reason_key. A client renders the move optimistically and reconciles on the answer.",
+    "description_key": "flow.tasks.card_move.description",
+    "actors": [
+      "Workspace member",
+      "External orchestrator (MOVE_POLICY)"
+    ],
+    "steps": [
+      {
+        "kind": "human",
+        "order": 0,
+        "note": "The member drags a card into another column",
+        "note_key": "flow.tasks.card_move.step.0.note",
+        "ref": ""
+      },
+      {
+        "kind": "http",
+        "order": 1,
+        "note": "200 applied / 202 deferred / 409 denied — the body carries reason_key",
+        "note_key": "flow.tasks.card_move.step.1.note",
+        "ref": "stapel_tasks.views.TaskMoveView.post",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/tasks/api/v1/tasks/<uuid:task_id>/move"
+          }
+        ]
+      },
+      {
+        "kind": "function",
+        "order": 2,
+        "note": "The same decision reached in-process over comm",
+        "note_key": "flow.tasks.card_move.step.2.note",
+        "ref": "tasks.move"
+      },
+      {
+        "kind": "action",
+        "order": 3,
+        "note": "Emitted only when the move was applied",
+        "note_key": "flow.tasks.card_move.step.3.note",
+        "ref": "task.moved"
+      }
+    ]
+  }
+]

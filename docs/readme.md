@@ -40,6 +40,13 @@ path("tasks/", include("stapel_tasks.urls"))
 - **Move** — drag-and-drop is a `move` validated by `MOVE_POLICY`:
   `allow` / `deny(reason_key)` / `defer` (the managed-card path).
 
+Two reads of the same cards, deliberately: `GET boards/{id}/tasks` is a keyset
+**feed** (`-created_at`), `GET boards/{id}/cards` is the **board shape** —
+columns in order, cards grouped by column key and sorted by `position`. A
+kanban view wants the second. `GET boards/presets` serves the vocabularies a
+board-creation form needs (presets, categories, checklist states, priority
+scale) instead of making the client hard-code them.
+
 ```python
 from stapel_tasks import services
 
@@ -65,6 +72,8 @@ services.move_task(card, to_column=board.columns.get(key="done"))  # emits task.
 | `BOARD_PRESETS` | `{}` (merged over built-in `simple`) | Board-shape presets |
 | `STORE_UNKNOWN_FEATURES` | `True` | Keep raw custom fields when attributes is absent |
 | `DEFAULT_PAGE_SIZE` | `100` | Card-list page size |
+| `BOARD_CARDS_MAX` | `2000` | Cap on the whole-board read (`truncated` beyond it) |
+| `PRIORITY_SCALE` | low/normal/high/urgent | Priority steps served to clients |
 
 See [MODULE.md](https://github.com/usestapel/stapel-tasks/blob/main/MODULE.md) for the full seam map (providers, registries, serializer
 seams, comm tables, anti-patterns, override-vs-upstream).
