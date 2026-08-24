@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-08-24
+
+- `attributes`/`all` extras follow stapel-attributes to 0.4.x. The 0.3.x ceiling pinned a stapel-core the
+  rest of this package cannot install with, so `pip install stapel-tasks[all]==0.3.0` could not resolve and the
+  release never reached PyPI.
+
 All notable changes to stapel-tasks are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0 semver: **minor = breaking**, patch = compatible.
