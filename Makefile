@@ -68,3 +68,20 @@ contract-check:
 # workspace venv, or `pip install stapel-tools` once published).
 migration-lint:
 	$(PYTHON) -m stapel_tools.migration_lint . --strict
+
+
+.PHONY: check
+
+# The gate a release has to pass locally, in the order CI runs it.
+#
+# `contract-check` is in here because of v0.3.1 (2026-08-24): that commit moved
+# `version` in pyproject.toml and left docs/ carrying 0.3.0, the tag reached CI,
+# and the publish job died on `docs/capabilities.json is stale — run make
+# contract`. A bumped version is a contract change like any other; the drift
+# gate is the only thing that knows it, so it runs before the suite, not after
+# the tag. The pre-commit hook runs the same target whenever pyproject.toml is
+# staged, so the bump-without-`make contract` commit cannot be made at all.
+check:
+	ruff check . --select E,F,W --ignore E501
+	$(MAKE) contract-check PYTHON=$(PYTHON)
+	$(PYTHON) -m pytest tests/ -q

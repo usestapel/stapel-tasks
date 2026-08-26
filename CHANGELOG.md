@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 — 2026-08-26
+
+- Contract docs regenerated for the 0.3.1 release: `docs/capabilities.json` and README still said 0.3.0, so the
+  publish job's drift gate rejected the tag. The triad drift test now skips off the pinned 3.12 interpreter
+  (`_codegen` refuses to emit there, which was failing the 3.11/3.13 legs), and `make contract-check` is wired into
+  `make check` and into the pre-commit hook whenever `pyproject.toml` is staged, so a bump without `make contract`
+  cannot land.
+
 ## 0.3.1 — 2026-08-24
 
 - `attributes`/`all` extras follow stapel-attributes to 0.4.x. The 0.3.x ceiling pinned a stapel-core the

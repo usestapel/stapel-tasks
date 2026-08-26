@@ -60,9 +60,19 @@ def test_triad_artifact_is_committed(name):
     assert (DOCS / name).is_file(), f"missing docs/{name} — run `make contract`"
 
 
+@pytest.mark.skipif(
+    sys.version_info[:2] != (3, 12),
+    reason="the triad is emitted on the pinned 3.12 interpreter only "
+    "(_codegen aborts elsewhere); the drift gate runs on the 3.12 leg",
+)
 @pytest.mark.parametrize("name", TRIAD)
 def test_triad_has_no_drift(tmp_path, name):
-    """Regenerate the triad; each committed file must match byte-for-byte."""
+    """Regenerate the triad; each committed file must match byte-for-byte.
+
+    Emission is pinned to 3.12 (``_codegen._require_pinned_interpreter``), so
+    on the matrix's other legs this test could only ever assert that the pin
+    still refuses to run — which it does, by exiting non-zero. It skips there.
+    """
     _emit_triad(tmp_path)
     assert (DOCS / name).read_bytes() == (tmp_path / name).read_bytes(), (
         f"docs/{name} drifted — run `make contract` and commit it"

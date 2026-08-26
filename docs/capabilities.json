@@ -1,6 +1,6 @@
 {
   "module": "stapel-tasks",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "provides": "Generic tasks and kanban boards: Board/Column/Task/ChecklistItem/TaskComment, a REST surface, a full outbox event surface, and custom fields via stapel-attributes. Usable standalone (a team runs a board by hand) or as the substrate an external orchestrator projects onto through opaque origin_* handles, a MOVE_POLICY authorization seam, and comm Functions (tasks.get/list_board/create/move/comment).",
   "axes": [
     {
