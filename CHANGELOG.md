@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.4.0 — 2026-08-30
+
+### `user.merged` — a card started as a guest stays the person's card
+
+`Task.creator` and `TaskComment.author` are `SET_NULL`, and `Task.assignees`
+is a plain M2M whose rows cascade with the user. So when stapel-auth folds an
+anonymous guest into an existing account on sign-in and deletes the guest row,
+this module's answer was *anonymization* — which is right for a deletion and
+exactly wrong for a merge. The person is still there; their card came back
+authored by nobody and assigned to nobody, seconds after they signed in.
+
+stapel-core 0.52.1 turns the omission into a system-check ERROR
+(`stapel_core.lifecycle.E001`): an app that handles `user.deleted` and not
+`user.merged` is not neutral about the second event, it has a silent wrong
+answer for it — and the failure has no symptom at the seam. Nothing raises,
+nothing retries; the first report is a person saying their card lost its
+author.
+
+All three user columns now move, in one transaction: `Task.creator`,
+`Task.assignees` and `TaskComment.author`. `Board` carries no owner (tenancy
+is the opaque `workspace_id` the host's scope seam resolves) and
+`Column`/`ChecklistItem` hang off a board or a card, so they follow by id.
+
+- **The assignment collision.** The M2M through table is unique on
+  `(task, user)`, so a card BOTH accounts sat on cannot be reassigned blindly.
+  The survivor's membership stays, the guest's is dropped, and the person ends
+  up on the card exactly once — the set is a set.
+- **No `task.assigned` fact.** That fact means "this card became somebody's
+  job". Here the same person keeps the same cards under a different id, and
+  announcing it would fire an assignment notification for every card they
+  already had.
+- **Ordering.** A guest with cards to carry and a survivor this deployment has
+  not projected yet raises `actions.MergeTargetNotReady` instead of returning
+  success, so the outbox redelivers and the transfer lands once the survivor's
+  user projection arrives. A guest that owns nothing is the quiet no-op —
+  which is also the at-least-once idempotency path.
+- **Malformed payloads never raise.** `"not-a-uuid"` raises `ValidationError`
+  (which is *not* a `ValueError`) from a UUID pk filter; an escaping exception
+  is a poison pill the bus would redeliver forever, and no redelivery fixes a
+  typo.
+
+Schema: `schemas/consumes/user.merged.json`. Tests: `tests/test_user_merged.py`.
+No migration, no API change.
+
 ## 0.3.2 — 2026-08-26
 
 - Contract docs regenerated for the 0.3.1 release: `docs/capabilities.json` and README still said 0.3.0, so the

@@ -52,7 +52,9 @@
   files `@stapel/tasks-react`'s `gen:api` / `gen:flows` / `gen:errors` read;
   `make contract-check` (and `tests/test_contract.py`) fail on drift.
 - **GDPR** — a `user.deleted` consumer that *anonymizes* (cards are shared
-  team artifacts).
+  team artifacts), paired with a `user.merged` consumer that *re-parents* —
+  the opposite operation, and the one core 0.52.x requires alongside it
+  (`stapel_core.lifecycle.E001`).
 
 ## stapel-core requirement (label ownership)
 
@@ -176,6 +178,7 @@ method body. The DTOs (`dto.py`) are the API models — never ORM instances.
 | Emit | `task.checklist_item_changed` | `task_id, item_id, ref, state` (QA channel — a FAILED step) |
 | Emit | `task.archived` | `task_id, board_id, actor_id` |
 | Consume | `user.deleted` | GDPR anonymization |
+| Consume | `user.merged` | `from_user_id, into_user_id, reason` — re-parent `Task.creator`, `Task.assignees` and `TaskComment.author` onto the surviving account |
 | Function | `tasks.get` | `{task_id}` → `{task}` |
 | Function | `tasks.list_board` | `{board_id, column?, category?, assignee_id?}` → columns + cards-by-column |
 | Function | `tasks.create` | `{board_id, title, column?, features?, origin?}` → `{task_id}` |
@@ -185,6 +188,17 @@ method body. The DTOs (`dto.py`) are the API models — never ORM instances.
 Reactions to these events (webhooks, notifications) are a subscription-layer
 concern, not this module's — subscribe `@on_action` in-process until
 stapel-webhooks arrives.
+
+**Merge policy (`user.merged`).** All three user columns move, in one
+transaction. Where both accounts are assigned to the same card the survivor's
+membership stays and the guest's is dropped — the M2M through table is unique
+on `(task, user)`, so the fold is what keeps the set a set. **No
+`task.assigned` fact is emitted**: that fact means "this card became somebody's
+job", and here the same person keeps the same cards under a different id —
+announcing it would fire an assignment notification for work they already had.
+A guest with cards to carry and a survivor this deployment has not projected
+yet raises `actions.MergeTargetNotReady`, so the outbox redelivers rather than
+marking the transfer done. Schema: `schemas/consumes/user.merged.json`.
 
 ### 7. Service layer is the primary API
 

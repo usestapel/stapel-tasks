@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "user.merged",
+  "description": "Consumed from stapel-auth. An anonymous guest account was absorbed into an existing account; the guest row ceases to exist. Tasks reassigns the guest's authored cards (Task.creator), their comments (TaskComment.author) and their card assignments (Task.assignees) to the surviving account, so work started before signing in is neither anonymized nor unassigned. Where both accounts are assigned to one card the survivor's membership stays and the guest's is dropped — the through table is unique on (task, user). No task.assigned fact is emitted: the same person keeps the same cards. Contract owned by the emitter.",
+  "type": "object",
+  "required": ["from_user_id", "into_user_id"],
+  "properties": {
+    "from_user_id": { "type": "string" },
+    "into_user_id": { "type": "string" },
+    "reason": { "type": "string" }
+  },
+  "additionalProperties": true
+}
