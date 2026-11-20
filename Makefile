@@ -51,7 +51,7 @@ contract-check:
 	mkdir -p "$$tmp/docs"; \
 	$(PYTHON) -m stapel_tasks._codegen --out "$$tmp/docs" || { rm -rf "$$tmp"; exit 1; }; \
 	rc=0; \
-	for f in schema.json flows.json errors.json; do \
+	for f in schema.json schema.v2.json flows.json errors.json; do \
 		if ! cmp -s "docs/$$f" "$$tmp/docs/$$f"; then \
 			echo "DRIFT: docs/$$f is stale — run 'make contract' and commit it"; \
 			diff "docs/$$f" "$$tmp/docs/$$f" | head -20; rc=1; \

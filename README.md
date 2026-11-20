@@ -24,14 +24,14 @@ pip install stapel-tasks
 
 | Fact | Value |
 |---|---|
-| Version | `0.4.0` |
+| Version | `0.4.1` |
 | Python | `>=3.11` (3.11, 3.12, 3.13, 3.14) |
 | Django | `djangorestframework>=3.14` |
 | HTTP operations | 22 |
 | Config axes | 3 |
 | Usage surface | 28 |
 | Extension points | 5 |
-| Error codes | 57 |
+| Error codes | 70 |
 | Documented flows | 3 |
 | Fleet dependencies | [`stapel-attributes`](https://github.com/usestapel/stapel-attributes) (optional) · [`stapel-core`](https://github.com/usestapel/stapel-core) |
 

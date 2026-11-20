@@ -33,7 +33,7 @@ DOCS = REPO / "docs"
 # the SAME budget it does, or it measures a different artifact.
 LLMS_BUDGET = "7000"
 
-TRIAD = ("schema.json", "flows.json", "errors.json")
+TRIAD = ("schema.json", "schema.v2.json", "flows.json", "errors.json")
 
 
 def _emit(out_dir: Path) -> None:

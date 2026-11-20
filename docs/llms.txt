@@ -1,8 +1,8 @@
-# stapel-tasks 0.4.0
+# stapel-tasks 0.4.1
 
 Generic tasks and kanban boards: Board/Column/Task/ChecklistItem/TaskComment, a REST surface, a full outbox event surface, and custom fields via stapel-attributes. Usable standalone (a team runs a board by hand) or as the substrate an external orchestrator projects onto through opaque origin_* handles, a MOVE_POLICY authorization seam, and comm Functions (tasks.get/list_board/create/move/comment).
 
-Contract: axes 3 · surface 28 · extension points 5 · operations 22 · error codes 57 · flows 3.
+Contract: axes 3 · surface 28 · extension points 5 · operations 22 · error codes 70 · flows 3.
 Generated from docs/capabilities.json by `stapel-llms-txt` — do not edit; drift-gated by `make contract-check`.
 
 ## Configuration axes — what a product switches on
@@ -127,12 +127,24 @@ Paths are relative to `/tasks/api/v1/`.
 - PATCH /tasks/{task_id} — tasks_api_v1_tasks_partial_update
 - GET /tasks/{task_id} — tasks_api_v1_tasks_retrieve
 
-## Error codes (57) — the StapelError envelope
+## Error codes (70) — the StapelError envelope
 Render `t(code, params)`; branch UX on the remediation. Localized text lives in docs/errors.<lang>.md, not here.
 - error.400.bad_request [400] fix_input
 - error.400.captcha_invalid [400] retry
 - error.400.captcha_required [400] retry
+- error.400.description_too_long [400] fix_input {max_length}
+- error.400.description_too_short [400] fix_input {min_length}
 - error.400.expected_list [400] fix_input
+- error.400.feature_above_maximum [400] fix_input {feature}
+- error.400.feature_below_minimum [400] fix_input {feature}
+- error.400.feature_invalid_config [400] fix_input {feature}
+- error.400.feature_invalid_format [400] fix_input {feature}
+- error.400.feature_invalid_type [400] fix_input {feature}
+- error.400.feature_mandatory_missing [400] fix_input {feature}
+- error.400.feature_not_allowed [400] fix_input {feature}
+- error.400.feature_not_in_options [400] fix_input {feature}
+- error.400.feature_unknown [400] fix_input {feature}
+- error.400.feature_unknown_type [400] fix_input {feature}
 - error.400.field.blank [400] fix_input {field}
 - error.400.field.does_not_exist [400] fix_input {field}
 - error.400.field.invalid [400] fix_input {field}
@@ -151,6 +163,7 @@ Render `t(code, params)`; branch UX on the remediation. Localized text lives in 
 - error.400.tasks_invalid_features [400] fix_input
 - error.400.tasks_invalid_move [400] fix_input
 - error.400.tasks_unknown_preset [400] fix_input
+- error.400.too_many_ids [400] fix_input {requested,limit}
 - error.400.validation_error [400] fix_input
 - error.400.verification_failed [400] verify
 - error.400.verification_invalid_factor [400] verify
@@ -181,7 +194,7 @@ Render `t(code, params)`; branch UX on the remediation. Localized text lives in 
 - error.422.unprocessable_entity [422] wait_and_retry
 - error.423.locked [423] wait_and_retry
 - error.423.verification_locked [423] wait_and_retry
-- error.429.rate_limit [429] wait_and_retry {retry_after_minutes}
+- error.429.rate_limit [429] wait_and_retry {retry_after_display,retry_after,retry_after_minutes}
 - error.429.too_many_requests [429] wait_and_retry
 - error.500.internal [500] contact_support
 - error.503.mandate_unavailable [503] retry
